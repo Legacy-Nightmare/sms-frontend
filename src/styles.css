@@ -1,0 +1,94 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--foreground);
+  --color-popover: var(--panel);
+  --color-popover-foreground: var(--foreground);
+  --color-primary: var(--gold);
+  --color-primary-foreground: var(--gold-foreground);
+  --color-secondary: var(--panel);
+  --color-secondary-foreground: var(--foreground);
+  --color-muted: var(--panel);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--active);
+  --color-accent-foreground: var(--sidebar-foreground);
+  --color-destructive: var(--red);
+  --color-destructive-foreground: var(--foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--gold);
+  --font-sans: "DM Sans", sans-serif;
+  --font-serif: "Libre Baskerville", serif;
+  --font-mono: "Roboto Mono", monospace;
+  --font-script: "Caveat", cursive;
+}
+
+/* Bright theme: white/near-white surfaces with a vivid navy brand sidebar
+   and a full, saturated accent palette (not pastel-washed) so badges,
+   stat cards, and class cards read as genuinely colorful on a light page —
+   not just a dark theme with the lightness flipped.
+
+   This file loads globally on every route (see __root.tsx) — it's the only
+   stylesheet shared between the admin dashboard and the public website, so
+   it must stay limited to tokens, resets, and anything shared UI primitives
+   (components/ui/*) depend on. Dashboard-only rules live in styles/admin.css
+   (loaded only under /admin/*) and public-site rules in
+   styles/public-site.css (loaded only on the public homepage) — keeping
+   them apart is deliberate: the two apps previously had colliding class
+   names (e.g. both defined `.brand` with different rules) and the dashboard
+   had unscoped `input/select/textarea/table` rules that would otherwise
+   bleed onto the public site's own markup. */
+:root {
+  --radius: .48rem;
+  --background: oklch(0.97 0.007 95);
+  --foreground: oklch(0.22 0.035 265);
+  --card: oklch(1 0 0);
+  --panel: oklch(1 0 0);
+  --sidebar: oklch(0.32 0.09 265);
+  --sidebar-foreground: oklch(0.97 0.008 260);
+  --sidebar-muted: oklch(0.75 0.035 258);
+  --border: oklch(0.90 0.012 260);
+  --input: oklch(0.80 0.02 260);
+  --muted-foreground: oklch(0.50 0.025 262);
+  --gold: oklch(0.76 0.14 76);
+  --gold-foreground: oklch(0.24 0.045 65);
+  --amber-ink: oklch(0.52 0.15 76);
+  --active: oklch(0.40 0.10 62);
+  --row-active: color-mix(in oklab, var(--gold) 16%, var(--panel));
+  --green: oklch(0.52 0.14 166);
+  --teal: oklch(0.48 0.12 180);
+  --purple: oklch(0.50 0.17 315);
+  --blue: oklch(0.52 0.15 236);
+  --pink: oklch(0.55 0.17 345);
+  --lime: oklch(0.48 0.12 112);
+  --orange: oklch(0.58 0.16 60);
+  --red: oklch(0.55 0.19 25);
+  --chrome: oklch(0.30 0.085 155);
+  --chrome-dark: oklch(0.19 0.065 155);
+  --chrome-foreground: oklch(0.97 0.012 150);
+  --chrome-muted: oklch(0.74 0.05 150);
+}
+
+* { box-sizing: border-box; border-color: var(--border); }
+html { background: var(--background); }
+body { margin: 0; min-width: 320px; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; }
+button, input, select, textarea { font: inherit; letter-spacing: 0; }
+button { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* 0.01ms, not 0s: a literal zero duration makes some engines skip applying
+     the animation's end-state entirely (Radix's Sheet/Dialog slide/fade
+     transforms get stuck at their off-screen starting position instead of
+     landing on-screen), rather than just skipping the visual transition. */
+  * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

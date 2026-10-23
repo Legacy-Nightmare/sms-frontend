@@ -1,0 +1,420 @@
+/* Public APHS homepage only — loaded by routes/index.tsx, never under
+   /admin/*. Ported from the standalone school-website project and rebranded
+   from "Nabarun Education Family" to Agradoot Preparatory and High School.
+
+   Unlike the admin split, this file does NOT re-import Tailwind or redefine
+   the shared @theme inline mapping — the shared styles.css (loaded on every
+   route via __root.tsx) already generates every Tailwind utility class this
+   page's shadcn components (Button) need. All color tokens below are scoped
+   under .school-site instead of :root specifically so they can't collide
+   with or override the dashboard's own :root tokens of the same name
+   (--background, --foreground, --border, --input, --muted-foreground, etc.)
+   — the two projects' original stylesheets both used those generic names
+   with different values, which was a real collision risk before this split.
+   .brand was renamed to .site-brand for the same reason (the dashboard
+   already has its own, differently-styled, .brand class). */
+
+.school-site {
+  --background: oklch(0.991 0.006 245);
+  --foreground: oklch(0.25 0.045 247);
+  --card: oklch(1 0 0);
+  --border: oklch(0.9 0.025 245);
+  --input: oklch(0.88 0.025 245);
+  --muted-foreground: oklch(0.53 0.038 247);
+  --school-navy: oklch(0.32 0.07 248);
+  --school-blue: oklch(0.56 0.2 248);
+  --school-green: oklch(0.66 0.16 164);
+  --school-sky: oklch(0.96 0.028 232);
+  --school-deep: oklch(0.25 0.075 245);
+
+  min-height: 100vh;
+  overflow: clip;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 14px;
+  font-family: Arial, "Helvetica Neue", sans-serif;
+}
+
+.school-site html { scroll-behavior: smooth; scroll-padding-top: 1rem; }
+.school-site button, .school-site input { font: inherit; }
+/* :where() zeroes .school-site's contribution to specificity, leaving just
+   the bare `a` (0,0,0,1) — otherwise `.school-site a` (0,0,1,1) outranks
+   every single-class tone selector that colors an anchor directly
+   (.quick-mint, .nav-link-home, .institution-blue, etc.), silently
+   overriding them back to the inherited body text color. */
+:where(.school-site) a { color: inherit; text-decoration: none; }
+.school-site button:focus-visible, .school-site a:focus-visible, .school-site input:focus-visible { outline: 3px solid color-mix(in oklab, var(--school-green) 68%, white); outline-offset: 3px; }
+
+.school-container { width: min(100% - 48px, 1304px); margin-inline: auto; }
+.top-strip { background: var(--school-navy); color: white; font-size: 12px; }
+.top-strip-inner, .top-date, .top-actions, .top-actions a { display: flex; align-items: center; }
+.top-strip-inner { min-height: 36px; justify-content: space-between; gap: 18px; }
+.top-date, .top-actions { gap: 12px; }
+.top-actions { gap: 0; }
+.top-actions a { min-height: 22px; padding-inline: 17px; gap: 9px; border-left: 1px solid oklch(1 0 0 / 20%); white-space: nowrap; transition: color 160ms ease; }
+.top-actions a:hover { color: oklch(0.83 0.15 165); }
+.top-actions a:first-child { border-left: 0; }
+.top-divider { height: 14px; width: 1px; background: oklch(1 0 0 / 65%); }
+.masthead { background: oklch(1 0 0); }
+.masthead-inner { display: flex; align-items: center; justify-content: space-between; gap: 36px; min-height: 86px; }
+.site-brand { display: inline-flex; align-items: center; gap: 15px; min-width: 0; }
+.brand-emblem { display: flex; align-items: center; gap: 8px; flex: none; }
+.brand-emblem img { display: block; width: 66px; height: 66px; border-radius: 50%; object-fit: cover; }
+.brand-seal { border: 1px solid var(--school-blue); color: var(--school-navy); font-size: 9px; font-weight: 700; line-height: 1.2; padding: 6px 5px; }
+.brand-copy { display: flex; flex-direction: column; gap: 6px; }
+.brand-copy strong { color: var(--school-blue); font-size: clamp(20px, 2vw, 25px); line-height: 1.15; }
+.brand-copy > span { display: flex; align-items: center; gap: 15px; color: var(--school-blue); font-style: italic; font-size: 13px; }
+.brand-copy i { width: 4px; height: 4px; border-radius: 50%; background: var(--school-blue); }
+.site-search { display: flex; flex: 0 1 400px; height: 40px; border: 1px solid oklch(0.9 0.04 230); border-radius: 999px; overflow: hidden; box-shadow: 0 1px 4px oklch(0.3 0.06 240 / 8%); }
+.site-search input { flex: 1; min-width: 0; border: 0; background: transparent; padding: 0 19px; color: var(--foreground); font-size: 13px; }
+.site-search input::placeholder { color: oklch(0.56 0.055 248); }
+.site-search input:focus { outline: none; }
+.site-search:focus-within { border-color: var(--school-blue); }
+.search-submit { flex: none; width: 49px; height: 40px; min-height: 40px; border-radius: 0 999px 999px 0; background: var(--school-green); padding: 0; box-shadow: none; }
+.search-submit:hover { background: oklch(0.58 0.16 164); }
+.main-nav { position: relative; z-index: 5; border-block: 1px solid oklch(0.89 0.035 232); background: oklch(0.985 0.009 232); }
+.nav-inner { min-height: 43px; }
+.nav-links { display: flex; align-items: center; justify-content: space-between; gap: 4px; min-height: 43px; }
+.nav-link { display: inline-flex; justify-content: center; align-items: center; gap: 10px; min-height: 37px; padding: 0 12px; border-radius: 999px; color: var(--school-navy); font-size: 12.5px; white-space: nowrap; transition: background 150ms ease, color 150ms ease; }
+.nav-link:hover { background: oklch(0.93 0.045 230); }
+.nav-link-home { min-width: 124px; color: white; background: var(--school-blue); font-weight: 700; }
+.nav-link-home:hover { background: oklch(0.51 0.2 248); color: white; }
+.mobile-nav-toggle { display: none; }
+.hero { position: relative; isolation: isolate; min-height: clamp(244px, 22vw, 260px); overflow: hidden; color: white; background: var(--school-navy); }
+.hero-photo, .hero-tint { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero-photo { z-index: -2; object-fit: cover; object-position: center 45%; }
+.hero-tint { z-index: -1; background: linear-gradient(90deg, oklch(0.28 0.075 244 / 96%) 0%, oklch(0.3 0.075 244 / 90%) 28%, oklch(0.29 0.07 244 / 68%) 41%, oklch(0.27 0.07 244 / 7%) 65%, transparent 100%); }
+.hero::before { content: ""; position: absolute; z-index: -1; left: -60px; bottom: -116px; width: 182px; height: 182px; border: 22px solid oklch(0.48 0.14 169 / 33%); border-radius: 50%; }
+.hero-inner { display: flex; align-items: center; min-height: inherit; }
+.hero-copy { width: min(52%, 540px); padding: 24px 0 29px 18px; }
+.hero-kicker { display: block; margin-bottom: 3px; font-size: 12px; letter-spacing: 1.4px; font-weight: 700; }
+.hero-copy h1 { margin: 0; font-size: clamp(27px, 3vw, 39px); line-height: 1.18; letter-spacing: 0; font-weight: 750; }
+.hero-copy h1 span { color: oklch(0.77 0.16 164); }
+.hero-copy p { margin: 8px 0 20px; font-size: clamp(14px, 1.35vw, 18px); line-height: 1.45; }
+.hero-button { gap: 20px; min-height: 42px; padding-inline: 22px; border: 0; border-radius: 999px; background: var(--school-green); color: white; font-size: 13px; font-weight: 700; box-shadow: none; }
+.hero-button:hover { background: oklch(0.58 0.15 164); }
+.hero-dots { position: absolute; bottom: 14px; left: 50%; display: flex; gap: 12px; transform: translateX(-50%); }
+.hero-dot { width: 9px; height: 9px; border: 1px solid white; border-radius: 50%; background: oklch(1 0 0 / 35%); }
+.hero-dot-current { background: white; }
+.info-grid { display: grid; grid-template-columns: 1.55fr 1fr 1.05fr; gap: 15px; margin-top: 16px; }
+.info-panel { min-width: 0; overflow: hidden; border: 1px solid oklch(0.88 0.04 234); border-radius: 8px; background: oklch(1 0 0); box-shadow: 0 3px 10px oklch(0.38 0.08 242 / 7%); }
+.panel-heading { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px; }
+.panel-heading h2 { display: flex; align-items: center; gap: 12px; margin: 0; color: var(--school-blue); font-size: 14px; font-weight: 700; }
+.notices-heading, .documents-heading { border-bottom: 1px solid oklch(0.92 0.03 234); background: oklch(0.972 0.017 233); }
+.megaphone-mark { display: inline-flex; align-items: center; color: var(--school-blue); }
+.panel-action { height: 31px; padding: 0 4px; gap: 7px; border-radius: 6px; color: var(--school-navy); font-size: 11px; font-weight: 500; }
+/* Overrides the shared Button "ghost" variant's hover:bg-accent utility,
+   which resolves to the admin dashboard's gold/brown accent token — wrong
+   on this page, since .school-site intentionally doesn't rescope --active
+   (it's dashboard-only). A soft sky-blue tint matches the site's palette. */
+.panel-action:hover { background: var(--school-sky); color: var(--school-blue); }
+.notice-list { padding-inline: 16px; }
+.notice-row { display: flex; min-height: 55px; align-items: center; gap: 12px; border-bottom: 1px solid oklch(0.93 0.025 234); }
+.notice-row:last-child { border-bottom: 0; }
+.notice-icon { display: inline-flex; width: 32px; height: 32px; flex: none; align-items: center; justify-content: center; border-radius: 50%; color: white; }
+.notice-icon-mint { background: oklch(0.69 0.16 164); }
+.notice-icon-sky { background: oklch(0.65 0.17 237); }
+.notice-icon-indigo { background: oklch(0.63 0.18 275); }
+.notice-icon-rose { background: oklch(0.64 0.21 19); }
+.notice-icon-amber { background: oklch(0.73 0.15 84); }
+.notice-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; min-width: 0; }
+.notice-title { display: flex; align-items: center; gap: 7px; overflow: hidden; color: var(--school-deep); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.new-pill { padding: 2px 5px; border-radius: 5px; background: oklch(0.65 0.23 24); color: white; font-size: 9px; font-weight: 700; }
+.notice-date { color: oklch(0.58 0.045 244); font-size: 11px; }
+.notice-chevron { flex: none; color: var(--school-blue); }
+.empty-search { padding: 13px 3px; color: var(--muted-foreground); font-size: 12px; }
+.quick-panel { background: white; }
+
+/* "View All" on the Notice Board opens this instead of expanding the panel
+   in place. Rendered as a plain (non-portaled) element nested inside
+   .school-site rather than via the shared Radix Dialog — that component
+   portals its content to document.body, outside .school-site, where it
+   would lose every token scoped here and fall back to the dashboard's
+   palette instead. */
+.notice-modal-overlay { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 24px; background: oklch(0.15 0.02 265 / 55%); }
+.notice-modal { width: min(560px, 100%); max-height: min(640px, 90vh); display: flex; flex-direction: column; background: var(--card); border-radius: 12px; box-shadow: 0 20px 50px oklch(0.2 0.05 245 / 25%); overflow: hidden; }
+.notice-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid oklch(0.92 0.03 234); }
+.notice-modal-header h2 { margin: 0; font-size: 16px; color: var(--school-blue); }
+.notice-modal-close { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; flex: none; border: none; background: transparent; border-radius: 50%; color: var(--muted-foreground); cursor: pointer; }
+.notice-modal-close:hover { background: var(--school-sky); color: var(--school-blue); }
+.notice-modal-body { overflow-y: auto; padding: 4px 20px 16px; }
+.notice-modal-body .notice-row { padding-inline: 0; }
+.quick-heading { background: oklch(0.57 0.19 248); color: white; }
+.quick-heading h2 { color: white; }
+.quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; padding: 13px; }
+.quick-card { position: relative; display: grid; min-height: 83px; grid-template-columns: 44px 1fr; align-items: center; gap: 11px; padding: 10px; border-radius: 8px; transition: transform 170ms ease, filter 170ms ease; }
+.quick-card:hover { transform: translateY(-2px); filter: saturate(1.14); }
+.quick-mint { background: oklch(0.95 0.043 164); color: oklch(0.4 0.12 164); }
+.quick-violet { background: oklch(0.958 0.035 303); color: oklch(0.56 0.19 299); }
+.quick-sky { background: oklch(0.955 0.037 237); color: oklch(0.53 0.18 245); }
+.quick-peach { background: oklch(0.965 0.045 74); color: oklch(0.64 0.18 53); }
+/* No `color` of its own here — it must inherit .quick-card's tone color
+   (e.g. oklch(0.4 0.12 164) for mint) so `background: currentColor` paints
+   a colored circle. Setting color here would make currentColor resolve to
+   that instead, flattening every circle (and its icon) to the same shade. */
+.quick-icon { display: inline-flex; width: 43px; height: 43px; align-items: center; justify-content: center; border-radius: 50%; background: currentColor; }
+.quick-icon svg { color: white; }
+.quick-card strong { font-size: 12px; line-height: 1.4; }
+.quick-arrow { position: absolute; right: 9px; bottom: 8px; }
+.download-badge { display: inline-flex; width: 29px; height: 29px; align-items: center; justify-content: center; border-radius: 50%; background: var(--school-blue); color: white; }
+.document-list { padding-inline: 16px; }
+.document-row { display: flex; min-height: 55px; align-items: center; gap: 11px; border-bottom: 1px solid oklch(0.93 0.025 234); }
+.document-row:last-child { border-bottom: 0; }
+.pdf-symbol { display: inline-flex; width: 27px; color: oklch(0.66 0.22 24); }
+.document-copy { display: flex; flex: 1; flex-direction: column; gap: 2px; color: var(--school-navy); font-size: 11px; }
+.document-copy small { color: oklch(0.57 0.04 244); font-size: 10px; }
+.document-download { color: var(--school-blue); }
+.gallery-section { margin-top: 15px; margin-bottom: 15px; }
+.gallery-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; color: var(--school-blue); font-size: 16px; font-weight: 700; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+.gallery-item { aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; border: 1px solid oklch(0.88 0.04 234); box-shadow: 0 3px 10px oklch(0.38 0.08 242 / 7%); }
+.gallery-item img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform 200ms ease; }
+.gallery-item:hover img { transform: scale(1.05); }
+.institutions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 15px; margin-bottom: 15px; }
+.institution { position: relative; display: flex; min-height: 103px; align-items: center; gap: 15px; overflow: hidden; padding: 13px 18px; border: 1px solid oklch(0.91 0.04 233); border-radius: 8px; transition: transform 150ms ease, box-shadow 150ms ease; }
+.institution::before { content: ""; position: absolute; top: -22px; right: -24px; width: 80px; height: 80px; border-radius: 50%; background: oklch(1 0 0 / 24%); }
+.institution:hover { transform: translateY(-2px); box-shadow: 0 5px 14px oklch(0.3 0.06 245 / 10%); }
+.institution-blue { background: oklch(0.95 0.04 235); color: oklch(0.34 0.11 248); }
+.institution-pink { background: oklch(0.97 0.035 338); color: oklch(0.43 0.18 350); }
+.institution-green { background: oklch(0.95 0.045 164); color: oklch(0.35 0.09 170); }
+.institution-ice { background: oklch(0.95 0.025 225); color: oklch(0.34 0.13 238); }
+.institution-mark { z-index: 1; display: flex; width: 68px; height: 68px; flex: none; align-items: center; justify-content: center; border: 1px solid currentColor; border-radius: 50%; background: oklch(1 0 0 / 55%); }
+.institution-copy { z-index: 1; display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 8px; }
+.institution-copy strong { font-size: 12px; line-height: 1.3; }
+.institution-copy small { font-size: 10px; line-height: 1.35; opacity: .85; }
+.institution-arrow { z-index: 1; display: inline-flex; width: 26px; height: 26px; flex: none; align-items: center; justify-content: center; border-radius: 50%; background: oklch(1 0 0 / 58%); }
+.site-footer { position: relative; background: var(--school-navy); color: white; }
+.site-footer::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, oklch(0.42 0.09 245 / 40%), transparent 48%, oklch(0.2 0.065 249 / 42%)); }
+.footer-main { position: relative; display: grid; grid-template-columns: 1.35fr .85fr 1.05fr 1.15fr; padding-top: 15px; padding-bottom: 13px; }
+.footer-about, .footer-column { min-width: 0; padding: 0 24px; border-right: 1px solid oklch(1 0 0 / 8%); }
+.footer-about { padding-left: 6px; }
+.footer-institutions { border-right: 0; }
+.footer-brand { display: flex; align-items: center; gap: 11px; font-size: 13px; }
+.footer-brand img { width: 49px; height: 49px; border-radius: 50%; object-fit: cover; }
+.footer-about p { max-width: 255px; margin: 3px 0 10px 60px; font-size: 11px; line-height: 1.5; }
+.social-links { display: flex; gap: 8px; }
+.footer-about .social-links { margin-left: 1px; }
+.social-links a { display: inline-flex; width: 25px; height: 25px; align-items: center; justify-content: center; border-radius: 50%; background: var(--school-blue); color: white; font-size: 13px; font-weight: 700; }
+.social-links a:nth-child(2) { background: oklch(0.61 0.22 25); }
+.social-links a:nth-child(3) { background: oklch(0.54 0.13 235); }
+.social-links a:nth-child(4) { background: oklch(0.62 0.12 232); }
+.footer-column h2 { margin: 1px 0 9px; font-size: 11px; font-weight: 700; }
+.footer-column > a, .footer-column > p { display: flex; min-height: 20px; align-items: center; gap: 7px; margin: 0; color: oklch(0.92 0.016 235); font-size: 10px; line-height: 1.35; }
+.footer-column > a:hover { color: oklch(0.79 0.15 164); }
+.footer-column > p { align-items: flex-start; margin-bottom: 4px; }
+.footer-column > p svg { flex: none; margin-top: 2px; }
+.footer-trailing { margin-left: auto; }
+.footer-bottom { position: relative; border-top: 1px solid oklch(1 0 0 / 13%); }
+.footer-bottom-inner { display: flex; min-height: 41px; align-items: center; justify-content: space-between; gap: 20px; }
+.footer-bottom-inner p, .footer-follow { margin: 0; color: oklch(0.94 0.01 240); font-size: 10px; }
+.footer-follow { display: flex; align-items: center; gap: 13px; }
+.social-links-small { gap: 7px; }
+.social-links-small a { width: 23px; height: 23px; }
+.back-to-top { position: fixed; z-index: 8; right: 18px; bottom: 18px; width: 42px; height: 42px; border-radius: 50%; background: var(--school-blue); color: white; box-shadow: 0 2px 8px oklch(0.2 0.05 245 / 25%); }
+.back-to-top:hover { background: var(--school-green); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+@media (min-width: 1500px) {
+  .hero { min-height: 280px; }
+  .hero-copy { padding-left: 18px; }
+  .info-grid { gap: 16px; }
+}
+@media (max-width: 1050px) {
+  .school-container { width: min(100% - 34px, 1304px); }
+  .nav-link { gap: 7px; padding-inline: 8px; font-size: 11px; }
+  .nav-link-home { min-width: 90px; }
+  .info-grid { grid-template-columns: 1.3fr 1fr; }
+  .documents-panel { grid-column: span 2; }
+  .document-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); column-gap: 15px; }
+  .institutions { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .footer-main { grid-template-columns: 1.15fr 1fr 1.15fr; row-gap: 24px; }
+  .footer-institutions { grid-column: 2 / 4; }
+  .footer-column:nth-child(2) { border-right: 0; }
+}
+@media (max-width: 720px) {
+  .school-container { width: min(100% - 28px, 560px); }
+  .top-strip-inner { min-height: 36px; }
+  .top-date { gap: 8px; }
+  .top-actions a { padding-inline: 9px; }
+  .top-actions a:first-child { display: none; }
+  .masthead-inner { min-height: 75px; gap: 12px; }
+  .site-brand { gap: 9px; }
+  .brand-emblem { gap: 4px; }
+  .brand-emblem img { width: 48px; height: 48px; }
+  .brand-seal { padding: 4px; font-size: 8px; }
+  .brand-copy strong { font-size: 16px; }
+  .brand-copy > span { gap: 8px; font-size: 11px; }
+  /* top: header stack (top-strip 36 + masthead 75 + nav 44 = 155px) plus a
+     few px of breathing room — the search box floats in the 46px gap that
+     .hero's margin-top reserves for it below. The original ported value
+     (124px) sat inside the nav bar's own height, overlapping the hamburger
+     menu button. */
+  .site-search { position: absolute; top: 159px; left: 14px; z-index: 4; width: calc(100% - 28px); max-width: none; height: 38px; background: oklch(1 0 0 / 96%); }
+  .search-submit { height: 38px; min-height: 38px; }
+  .main-nav { min-height: 44px; }
+  .nav-inner { min-height: 42px; }
+  .mobile-nav-toggle { display: inline-flex; height: 34px; padding: 0 11px; border-color: oklch(0.86 0.035 238); background: white; color: var(--school-navy); font-size: 12px; }
+  .nav-links { position: absolute; top: 43px; left: 0; right: 0; display: none; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 4px 7px; padding: 9px 14px 12px; border-bottom: 1px solid var(--border); background: white; box-shadow: 0 8px 14px oklch(0.25 0.05 245 / 12%); }
+  .nav-links-open { display: grid; }
+  .nav-link, .nav-link-home { justify-content: flex-start; min-width: 0; padding-inline: 10px; font-size: 12px; }
+  .hero { min-height: 315px; margin-top: 46px; }
+  .hero-photo { object-position: 57% 45%; }
+  .hero-tint { background: linear-gradient(90deg, oklch(0.27 0.075 244 / 95%), oklch(0.29 0.07 244 / 79%) 55%, oklch(0.27 0.07 244 / 25%)); }
+  .hero-copy { width: 100%; max-width: 440px; padding: 22px 0 31px 4px; }
+  .hero-copy h1 { max-width: 375px; font-size: 31px; }
+  .hero-copy p { font-size: 16px; }
+  .info-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }
+  .documents-panel { grid-column: auto; }
+  .quick-grid { gap: 9px; }
+  .quick-card { min-height: 76px; }
+  .document-list { display: block; }
+  .institutions { grid-template-columns: 1fr; gap: 9px; margin-block: 12px; }
+  .institution { min-height: 89px; }
+  .footer-main { grid-template-columns: 1fr 1fr; row-gap: 22px; padding-top: 21px; padding-bottom: 18px; }
+  .footer-about { grid-column: 1 / -1; padding-inline: 0; border-right: 0; }
+  .footer-about p { margin-left: 60px; }
+  .footer-column { padding: 0 10px; }
+  .footer-column:nth-child(2) { padding-left: 0; }
+  .footer-column:nth-child(3) { border-right: 0; }
+  .footer-institutions { grid-column: auto; padding-left: 0; }
+  .footer-bottom-inner { align-items: flex-start; flex-direction: column; justify-content: center; gap: 8px; padding-block: 10px; }
+  .footer-follow { align-self: flex-end; }
+}
+@media (max-width: 400px) {
+  .school-container { width: min(100% - 22px, 560px); }
+  .brand-emblem img { width: 42px; height: 42px; }
+  .brand-seal { font-size: 7px; }
+  .brand-copy strong { font-size: 14px; }
+  .brand-copy > span { gap: 5px; font-size: 10px; }
+  .top-actions a { padding-inline: 6px; gap: 5px; font-size: 11px; }
+  .hero-copy h1 { font-size: 27px; }
+  .notice-list, .document-list { padding-inline: 11px; }
+  .quick-grid { padding: 10px; }
+  .quick-card { grid-template-columns: 38px 1fr; gap: 8px; padding: 8px; }
+  .quick-icon { width: 37px; height: 37px; }
+  .quick-card strong { font-size: 11px; }
+}
+
+/* ---- Sub-pages (About, Notices, Admissions, Results, Gallery, Location,
+   Contact) — shared banner + content primitives used by routes other than
+   the homepage. All reuse the color tokens/patterns defined above. ---- */
+.subpage-hero { background: linear-gradient(120deg, var(--school-navy), oklch(0.26 0.075 248)); color: white; padding: 30px 0 34px; }
+.subpage-hero-inner { display: flex; flex-direction: column; gap: 8px; }
+.subpage-breadcrumb { display: flex; align-items: center; gap: 7px; font-size: 12px; color: oklch(0.85 0.03 232); }
+.subpage-breadcrumb a:hover { color: white; }
+.subpage-title { margin: 0; font-size: clamp(22px, 2.6vw, 30px); font-weight: 750; }
+.subpage-tagline { margin: 0; max-width: 680px; font-size: 13px; color: oklch(0.9 0.02 232); line-height: 1.55; }
+.subpage-main { padding-block: 26px 48px; }
+.subpage-section { margin-bottom: 30px; }
+.subpage-section h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 13px; color: var(--school-blue); font-size: 17px; font-weight: 700; }
+.subpage-card { border: 1px solid oklch(0.88 0.04 234); border-radius: 10px; background: white; box-shadow: 0 3px 10px oklch(0.38 0.08 242 / 7%); padding: 18px 20px; }
+.subpage-prose p { margin: 0 0 12px; font-size: 13px; line-height: 1.75; color: var(--foreground); }
+.subpage-prose p:last-child { margin-bottom: 0; }
+
+.pill-search { display: flex; align-items: center; gap: 9px; height: 42px; max-width: 380px; border: 1px solid oklch(0.88 0.04 234); border-radius: 999px; padding: 0 17px; background: white; color: var(--muted-foreground); box-shadow: 0 1px 4px oklch(0.3 0.06 240 / 6%); }
+.pill-search input { flex: 1; min-width: 0; border: 0; background: transparent; font-size: 13px; color: var(--foreground); }
+.pill-search input::placeholder { color: oklch(0.6 0.03 244); }
+.pill-search input:focus { outline: none; }
+.pill-search:focus-within { border-color: var(--school-blue); }
+
+/* About */
+.about-layout { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+.about-values-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.about-value-card { display: flex; flex-direction: column; gap: 7px; border: 1px solid oklch(0.88 0.04 234); border-radius: 10px; background: white; padding: 16px; box-shadow: 0 3px 10px oklch(0.38 0.08 242 / 7%); }
+.about-value-icon { display: inline-flex; width: 36px; height: 36px; align-items: center; justify-content: center; border-radius: 50%; background: var(--school-sky); color: var(--school-blue); }
+.about-value-card strong { font-size: 13px; color: var(--school-deep); }
+.about-value-card p { margin: 0; font-size: 12px; line-height: 1.55; color: var(--muted-foreground); }
+.about-activity-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 20px; margin: 0; padding: 0; list-style: none; }
+.about-activity-list li { display: flex; align-items: center; gap: 9px; font-size: 13px; color: var(--foreground); }
+.about-activity-list svg { flex: none; color: var(--school-green); }
+.about-sidebar { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 16px; }
+.about-facts-card h3, .about-cta-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 13px; color: var(--school-blue); }
+.about-facts-card dl { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.about-facts-card dl > div { display: flex; flex-direction: column; gap: 2px; }
+.about-facts-card dt { font-size: 10.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--muted-foreground); }
+.about-facts-card dd { margin: 0; font-size: 12.5px; color: var(--school-deep); font-weight: 600; }
+.about-cta-card p { margin: 0 0 12px; font-size: 12px; line-height: 1.5; color: var(--muted-foreground); }
+.about-cta-card .hero-button { width: 100%; justify-content: center; }
+
+/* Notices listing page */
+.notices-page-list { padding: 4px 6px; }
+.notice-row-full { padding: 13px 10px; border-radius: 8px; align-items: flex-start; }
+.notice-row-full:hover { background: var(--school-sky); }
+.notice-class-pill { padding: 2px 8px; border-radius: 999px; background: var(--school-sky); color: var(--school-blue); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.notice-body-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 2px 0; font-size: 11.5px; line-height: 1.5; color: var(--muted-foreground); }
+
+/* Admissions */
+.admission-steps { display: flex; flex-direction: column; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.admission-step { display: flex; gap: 14px; align-items: flex-start; border: 1px solid oklch(0.88 0.04 234); border-radius: 10px; background: white; padding: 14px 16px; box-shadow: 0 3px 10px oklch(0.38 0.08 242 / 7%); }
+.admission-step-number { display: inline-flex; flex: none; width: 30px; height: 30px; align-items: center; justify-content: center; border-radius: 50%; background: var(--school-blue); color: white; font-size: 13px; font-weight: 700; }
+.admission-step strong { display: block; margin-bottom: 4px; font-size: 13px; color: var(--school-deep); }
+.admission-step p { margin: 0; font-size: 12px; line-height: 1.55; color: var(--muted-foreground); }
+.fee-table { width: 100%; min-width: 480px; border-collapse: collapse; font-size: 12.5px; }
+.fee-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid oklch(0.88 0.04 234); color: var(--school-blue); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
+.fee-table td { padding: 10px 12px; border-bottom: 1px solid oklch(0.92 0.03 234); color: var(--foreground); }
+.fee-table tr:last-child td { border-bottom: 0; }
+.fee-table-note { margin: 14px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted-foreground); }
+.timeline { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; list-style: none; }
+.timeline-item { position: relative; display: flex; gap: 14px; padding: 0 0 20px 4px; }
+.timeline-item:last-child { padding-bottom: 0; }
+.timeline-item::before { content: ""; position: absolute; left: 9px; top: 18px; bottom: 0; width: 1px; background: oklch(0.88 0.04 234); }
+.timeline-item:last-child::before { display: none; }
+.timeline-dot { flex: none; width: 19px; height: 19px; margin-top: 1px; border-radius: 50%; border: 3px solid var(--school-green); background: white; }
+.timeline-item strong { display: block; font-size: 13px; color: var(--school-deep); }
+.timeline-date { display: block; margin-top: 2px; font-size: 11.5px; color: var(--muted-foreground); }
+.admission-contact-cta { display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; background: var(--school-sky); border-color: oklch(0.85 0.05 232); }
+.admission-contact-cta strong { display: block; margin-bottom: 4px; font-size: 13px; color: var(--school-deep); }
+.admission-contact-cta p { margin: 0; font-size: 12px; color: var(--muted-foreground); }
+.admission-contact-links { display: flex; gap: 14px; flex-wrap: wrap; }
+.admission-contact-links a { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--school-blue); }
+.admission-contact-links a:hover { text-decoration: underline; }
+
+/* Results */
+.results-notice { align-items: flex-start; gap: 14px; }
+.results-notice-icon { flex: none; color: oklch(0.6 0.19 40); margin-top: 2px; }
+.results-row { padding: 13px 10px; }
+.results-published-pill { flex: none; align-self: center; padding: 4px 10px; border-radius: 999px; background: oklch(0.66 0.16 164 / 16%); color: oklch(0.4 0.12 164); font-size: 10.5px; font-weight: 700; }
+
+/* Gallery page */
+.gallery-grid-full { margin-top: 2px; }
+.gallery-item-button { display: block; width: 100%; padding: 0; border: 1px solid oklch(0.88 0.04 234); cursor: pointer; background: none; }
+.lightbox-overlay { z-index: 60; }
+.lightbox-frame { position: relative; width: min(880px, 100%); max-height: 90vh; display: flex; flex-direction: column; background: var(--card); border-radius: 12px; overflow: hidden; box-shadow: 0 20px 50px oklch(0.2 0.05 245 / 25%); }
+.lightbox-frame img { display: block; width: 100%; max-height: 78vh; object-fit: contain; background: oklch(0.1 0.01 240); }
+.lightbox-close { position: absolute; top: 10px; right: 10px; background: oklch(0.15 0.02 265 / 55%); color: white; }
+.lightbox-close:hover { background: oklch(0.15 0.02 265 / 75%); }
+.lightbox-caption { margin: 0; padding: 12px 16px; font-size: 12.5px; color: var(--muted-foreground); }
+
+/* Location */
+.location-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.location-card { position: relative; display: flex; flex-direction: column; gap: 8px; overflow: hidden; border: 1px solid oklch(0.88 0.04 234); border-radius: 10px; background: white; padding: 18px; box-shadow: 0 3px 10px oklch(0.38 0.08 242 / 7%); }
+.location-card-icon { display: inline-flex; width: 48px; height: 48px; align-items: center; justify-content: center; border-radius: 50%; background: var(--school-sky); color: var(--school-blue); }
+.location-card strong { font-size: 14px; color: var(--school-deep); }
+.location-card-address { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted-foreground); }
+.location-card-detail { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 12px; color: var(--muted-foreground); }
+.location-directions-link { display: inline-flex; align-items: center; gap: 7px; margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--school-blue); }
+.location-directions-link:hover { text-decoration: underline; }
+.location-institution-blue .location-card-icon { background: oklch(0.95 0.04 235); color: oklch(0.34 0.11 248); }
+.location-institution-pink .location-card-icon { background: oklch(0.97 0.035 338); color: oklch(0.43 0.18 350); }
+.location-institution-green .location-card-icon { background: oklch(0.95 0.045 164); color: oklch(0.35 0.09 170); }
+.location-institution-ice .location-card-icon { background: oklch(0.95 0.025 225); color: oklch(0.34 0.13 238); }
+
+/* Contact */
+.contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.contact-card-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; font-size: 14px; color: var(--school-blue); font-weight: 700; }
+.contact-card-text { margin: 0 0 6px; font-size: 12.5px; line-height: 1.6; color: var(--foreground); }
+.contact-card-text a { color: var(--school-blue); font-weight: 600; }
+.contact-card-text a:hover { text-decoration: underline; }
+.contact-card-link { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--school-blue); }
+.contact-card-link:hover { text-decoration: underline; }
+
+@media (max-width: 1050px) {
+  .about-layout { grid-template-columns: 1fr; }
+  .about-sidebar { position: static; flex-direction: row; }
+  .about-sidebar > * { flex: 1; }
+}
+@media (max-width: 720px) {
+  .about-values-grid, .about-activity-list, .contact-grid { grid-template-columns: 1fr; }
+  .about-sidebar { flex-direction: column; }
+  .admission-contact-cta { flex-direction: column; align-items: flex-start; }
+}
