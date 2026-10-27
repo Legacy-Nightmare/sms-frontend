@@ -1,0 +1,16 @@
+node_modules
+.output
+.vinxi
+.nitro
+.tanstack
+dist
+dist-ssr
+coverage
+.git
+.github
+.env
+*.log
+.DS_Store
+README.md
+CLAUDE.md
+AGENTS.md
