@@ -1,21 +1,42 @@
+
 name: Frontend CI/CD
 
 on:
   push:
-    branches: [aphsmsp-stg]
+    branches:
+      - aphsmsp-stg
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.*"
+      - "index.html"
+      - "Dockerfile"
+      - ".dockerignore"
+      - ".github/workflows/frontend.yml"
+
   pull_request:
-    branches: [aphsmsp-stg]
+    branches:
+      - aphsmsp-stg
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: frontend-${{ github.ref }}
+  group: frontend-stg-deploy
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '22'
+  NODE_VERSION: "22"
 
 jobs:
   test:
+    name: Test frontend
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,15 +45,10 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      # Plain `npm ci` hits a real npm/arborist peer-dependency resolution
-      # bug with this project's bleeding-edge deps (React 19, Vite 8, vitest
-      # 4) — see CLAUDE.md. --legacy-peer-deps works around it cleanly.
-      - run: npm ci --legacy-peer-deps
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
 
-      # Pre-existing formatting debt (~190 prettier/eslint findings, not
-      # correctness bugs) predates this pipeline — reported but not
-      # blocking until someone does a dedicated cleanup pass.
-      - name: Lint (non-blocking)
+      - name: Lint
         run: npm run lint
         continue-on-error: true
 
@@ -40,67 +56,88 @@ jobs:
         run: npm run test
 
   build-and-push:
+    name: Build and publish frontend image
     needs: test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
       packages: write
+
     outputs:
-      image: ${{ steps.image.outputs.name }}
+      image: ${{ steps.meta.outputs.image }}
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Compute lowercase image name
-        id: image
-        run: echo "name=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+      - name: Define image name
+        id: meta
+        shell: bash
+        run: |
+          REPO="$(echo "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')"
+          echo "image=ghcr.io/${REPO}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - uses: docker/login-action@v3
+      - name: Login to GHCR
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/build-push-action@v6
+      - name: Build and push frontend
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: |
-            ${{ steps.image.outputs.name }}:stg
-            ${{ steps.image.outputs.name }}:stg-${{ github.sha }}
+            ${{ steps.meta.outputs.image }}:stg
+            ${{ steps.meta.outputs.image }}:stg-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
+    name: Deploy frontend to EC2
     needs: build-and-push
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+
+    environment: staging
+
     permissions:
       contents: read
-      packages: read
+
     steps:
-      # Assumes /opt/sms on the EC2 host already has docker-compose.yml +
-      # nginx.conf — the backend repo's deploy job owns syncing those (it has
-      # to, for Postgres/env). On a brand-new host, deploy the backend repo's
-      # aphsmsp-stg branch at least once before the first frontend deploy.
       - name: Deploy frontend container
         uses: appleboy/ssh-action@v1.2.0
         env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.STG_GHCR_READ_TOKEN }}
+          GHCR_USERNAME: ${{ secrets.STG_GHCR_USERNAME }}
           IMAGE: ${{ needs.build-and-push.outputs.image }}
         with:
           host: ${{ secrets.STG_EC2_HOST }}
           username: ${{ secrets.STG_EC2_SSH_USER }}
           key: ${{ secrets.STG_EC2_SSH_KEY }}
-          envs: GHCR_TOKEN,GHCR_ACTOR,IMAGE
+          envs: GHCR_TOKEN,GHCR_USERNAME,IMAGE
           script: |
-            set -e
+            set -eu
             cd /opt/sms
-            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_ACTOR" --password-stdin
+
+            test -n "$GHCR_TOKEN"
+            test -n "$GHCR_USERNAME"
+            test -n "$IMAGE"
+
+            echo "$GHCR_TOKEN" | docker login ghcr.io \
+              -u "$GHCR_USERNAME" --password-stdin
+
             export FRONTEND_IMAGE="$IMAGE:stg"
+
+            docker compose config --quiet
             docker compose pull frontend
-            docker compose up -d --wait frontend
-            docker compose up -d nginx
-            docker image prune -f
+            docker compose up -d --no-deps --wait frontend
+
+            docker compose ps frontend
+            docker compose logs --tail=50 frontend
