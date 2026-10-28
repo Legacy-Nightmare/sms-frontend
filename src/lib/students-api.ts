@@ -1,9 +1,40 @@
+
 import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "@/lib/api";
 
-const API_BASE_URL = import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:8082";
+const API_BASE_URL =
+  import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:8082";
 
 export function studentPhotoUrl(photoUrl: string | null): string | null {
-  return photoUrl ? `${API_BASE_URL}${photoUrl}` : null;
+  if (!photoUrl) {
+    return null;
+  }
+
+  const path = photoUrl.trim();
+
+  if (!path) {
+    return null;
+  }
+
+  // Already a complete HTTP/HTTPS URL: return unchanged.
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  // Public RustFS files are served directly through Nginx.
+  if (path.startsWith("/sms-uploads/")) {
+    return path;
+  }
+
+  // Handle RustFS paths without a leading slash.
+  if (path.startsWith("sms-uploads/")) {
+    return `/${path}`;
+  }
+
+  // Other backend-relative file URLs.
+  const baseUrl = API_BASE_URL.replace(/\/+$/, "");
+  const relativePath = path.replace(/^\/+/, "");
+
+  return `${baseUrl}/${relativePath}`;
 }
 
 export type GuardianRelation = "father" | "mother" | "other";
@@ -50,11 +81,22 @@ export interface CreateStudentInput {
     | undefined;
 }
 
-export function fetchStudents(filters?: { classId?: number; sectionId?: number }) {
+export function fetchStudents(filters?: {
+  classId?: number;
+  sectionId?: number;
+}) {
   const params = new URLSearchParams();
-  if (filters?.classId) params.set("classId", String(filters.classId));
-  if (filters?.sectionId) params.set("sectionId", String(filters.sectionId));
+
+  if (filters?.classId) {
+    params.set("classId", String(filters.classId));
+  }
+
+  if (filters?.sectionId) {
+    params.set("sectionId", String(filters.sectionId));
+  }
+
   const qs = params.toString();
+
   return apiGet<StudentDto[]>(`/students${qs ? `?${qs}` : ""}`);
 }
 
@@ -79,7 +121,10 @@ export interface UpdateStudentInput {
     | undefined;
 }
 
-export function updateStudent(studentId: number, input: UpdateStudentInput) {
+export function updateStudent(
+  studentId: number,
+  input: UpdateStudentInput,
+) {
   return apiPut<StudentDto>(`/students/${studentId}`, input);
 }
 
@@ -90,5 +135,6 @@ export function deleteStudent(studentId: number) {
 export function uploadStudentPhoto(studentId: number, file: File) {
   const formData = new FormData();
   formData.append("photo", file);
+
   return apiUpload<StudentDto>(`/students/${studentId}/photo`, formData);
 }
