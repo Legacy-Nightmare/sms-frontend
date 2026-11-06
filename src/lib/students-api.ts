@@ -2,8 +2,13 @@ import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "@/lib/api";
 
 const API_BASE_URL = import.meta.env["VITE_API_BASE_URL"] ?? "http://localhost:8082";
 
+// Photos now come back as full Supabase Storage URLs already — only a
+// legacy local-disk path (from before that migration) needs the API origin
+// prepended to become fetchable.
 export function studentPhotoUrl(photoUrl: string | null): string | null {
-  return photoUrl ? `${API_BASE_URL}${photoUrl}` : null;
+  if (!photoUrl) return null;
+  if (/^https?:\/\//.test(photoUrl)) return photoUrl;
+  return `${API_BASE_URL}${photoUrl}`;
 }
 
 export type GuardianRelation = "father" | "mother" | "other";

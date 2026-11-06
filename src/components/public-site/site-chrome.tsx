@@ -51,10 +51,12 @@ function useSiteProfile() {
 
 // The seeded default (logoUrl: "/logo.jpeg") is a static asset served by the
 // frontend itself, not something the backend has — resolving it against the
-// API origin would 404. Only a logo an admin actually uploaded through
-// Website Manage lives under /uploads/website/logo/... on the backend and
-// needs resolvePublicAssetUrl.
-function resolveLogoUrl(logoUrl: string | null | undefined) {
+// API origin would 404. A logo an admin actually uploaded through Website
+// Manage is a full R2 URL (or, for anything uploaded before the R2
+// migration, a legacy /uploads/website/logo/... backend-relative path) and
+// needs resolvePublicAssetUrl. Exported so the admin Website Manage page's
+// own logo preview uses the same rule instead of re-guessing it.
+export function resolveLogoUrl(logoUrl: string | null | undefined) {
   if (logoUrl?.startsWith("/uploads/")) return resolvePublicAssetUrl(logoUrl);
   return logoUrl || "/logo.jpeg";
 }

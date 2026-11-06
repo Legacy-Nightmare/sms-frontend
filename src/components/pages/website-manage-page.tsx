@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge, DataTable, EmptyRow, PageHeading, Panel } from "@/components/dashboard-ui";
 import { resolvePublicAssetUrl } from "@/lib/public-api";
+import { resolveLogoUrl } from "@/components/public-site/site-chrome";
 import {
   createInstitution,
   deleteGalleryPhoto,
@@ -169,7 +170,7 @@ function ProfileTab() {
             Logo
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
               <img
-                src={profile.data?.logoUrl ? resolvePublicAssetUrl(profile.data.logoUrl) : "/logo.jpeg"}
+                src={resolveLogoUrl(profile.data?.logoUrl)}
                 alt="Logo preview"
                 style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
               />

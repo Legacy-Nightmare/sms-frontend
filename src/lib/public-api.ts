@@ -24,9 +24,11 @@ export async function publicGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Uploaded files (gallery photos, documents, logo) come back as paths
-// relative to the backend (e.g. "/uploads/website/gallery/..."), not the
-// frontend's own origin — this resolves them to a fetchable/linkable URL.
+// Uploaded files (gallery photos, documents, logo) are stored in Cloudflare
+// R2 and come back as full URLs already — only a path relative to the
+// backend (e.g. the legacy local-disk "/uploads/...") needs the API origin
+// prepended to become fetchable/linkable.
 export function resolvePublicAssetUrl(path: string): string {
+  if (/^https?:\/\//.test(path)) return path;
   return `${API_BASE_URL}${path}`;
 }
