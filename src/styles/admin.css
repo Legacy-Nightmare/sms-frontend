@@ -23,8 +23,10 @@
 .sidebar nav > div:nth-of-type(4) { --item-color: oklch(0.80 0.09 150); }
 .sidebar nav > div:nth-of-type(5) { --item-color: oklch(0.80 0.09 150); }
 .sidebar nav > div:nth-of-type(6) { --item-color: oklch(0.80 0.09 150); }
-.account { margin: 0 12px; padding: 16px 8px 16px; border-top: 1px solid color-mix(in oklab, white 15%, transparent); }
-.account > div { display: flex; align-items: center; gap: 9px; }
+.account { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 12px; padding: 16px 8px 16px; border-top: 1px solid color-mix(in oklab, white 15%, transparent); }
+.account > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.account > div p { min-width: 0; overflow: hidden; }
+.account > div strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account p { margin: 0; color: var(--chrome-foreground); font-size: 12px; }
 .signout { margin-top: 11px; margin-left: -8px; color: var(--chrome-muted); font-size: 12px; font-weight: 400; }
 .main-content { min-height: 100vh; margin-left: 215px; padding: 25px 30px 26px; }
