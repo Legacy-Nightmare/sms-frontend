@@ -24,9 +24,9 @@ export async function publicGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Uploaded files (gallery photos, documents, logo) are stored in Cloudflare
-// R2 and come back as full URLs already — only a path relative to the
-// backend (e.g. the legacy local-disk "/uploads/...") needs the API origin
+// Uploaded files (gallery photos, documents, logo) are stored in RustFS and
+// come back as full URLs already — only a path relative to the backend
+// (e.g. the legacy local-disk "/uploads/...") needs the API origin
 // prepended to become fetchable/linkable.
 export function resolvePublicAssetUrl(path: string): string {
   if (/^https?:\/\//.test(path)) return path;
