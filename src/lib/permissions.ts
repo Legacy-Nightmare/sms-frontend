@@ -6,12 +6,14 @@ import type { Role } from "@/lib/auth";
 // independently on every endpoint; this only controls what's shown/visited
 // client-side.
 export type Page =
-  "dashboard" | "students" | "classes" | "attendance" | "exams" | "notices" | "staff" | "finance" | "website";
+  "dashboard" | "students" | "teachers" | "classes" | "subjects" | "attendance" | "exams" | "notices" | "staff" | "finance" | "website";
 
 export const PAGE_ROLES: Record<Page, Role[]> = {
   dashboard: ["admin", "teacher"],
   students: ["admin", "teacher"],
+  teachers: ["admin"],
   classes: ["admin", "teacher"],
+  subjects: ["admin"],
   attendance: ["admin", "teacher"],
   exams: ["admin", "teacher"],
   notices: ["admin", "teacher"],
