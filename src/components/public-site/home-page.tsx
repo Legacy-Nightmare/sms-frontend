@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -75,7 +75,30 @@ export function HomePage() {
 
   const schoolName = profile?.schoolName ?? "Agradoot Preparatory and High School";
   const tagline = profile?.tagline ?? "Learn, Grow, Build a Better Tomorrow";
-  const heroUrl = profile?.heroImageUrl ? resolvePublicAssetUrl(profile.heroImageUrl) : campusImage;
+
+  const heroSlides = useMemo(() => {
+    const images = site.data?.heroImages ?? [];
+    return images.length > 0
+      ? images.map((image) => resolvePublicAssetUrl(image.imageUrl))
+      : [campusImage];
+  }, [site.data?.heroImages]);
+
+  const [heroIndex, setHeroIndex] = useState(0);
+
+  // Resets to slide 0 whenever the slide set itself changes (e.g. the real
+  // list loads in after the initial single-fallback-image render) so the
+  // index never points past the end of a shorter new list.
+  useEffect(() => {
+    setHeroIndex(0);
+  }, [heroSlides]);
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setHeroIndex((i) => (i + 1) % heroSlides.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [heroSlides]);
 
   return (
     <div className="school-site" id="home">
@@ -83,7 +106,14 @@ export function HomePage() {
 
       <main>
         <section className="hero" aria-label={`Welcome to ${schoolName}`}>
-          <img className="hero-photo" src={heroUrl} width={1920} height={768} alt="Students gathering together on their school campus" fetchPriority="high" />
+          <img
+            className="hero-photo"
+            src={heroSlides[heroIndex]}
+            width={1920}
+            height={768}
+            alt="Students gathering together on their school campus"
+            fetchPriority="high"
+          />
           <div className="hero-tint" />
           <div className="school-container hero-inner">
             <div className="hero-copy">
@@ -95,9 +125,20 @@ export function HomePage() {
               </Button>
             </div>
           </div>
-          <div className="hero-dots" aria-label="Slide 1 of 3">
-            <span className="hero-dot hero-dot-current" /><span className="hero-dot" /><span className="hero-dot" />
-          </div>
+          {heroSlides.length > 1 && (
+            <div className="hero-dots" aria-label={`Slide ${heroIndex + 1} of ${heroSlides.length}`}>
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={slide}
+                  type="button"
+                  className={index === heroIndex ? "hero-dot hero-dot-current" : "hero-dot"}
+                  style={{ cursor: "pointer", padding: 0 }}
+                  aria-label={`Show slide ${index + 1}`}
+                  onClick={() => setHeroIndex(index)}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="school-container info-grid" aria-label="School updates and resources">

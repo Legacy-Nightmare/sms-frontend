@@ -16,12 +16,15 @@ import { resolveLogoUrl } from "@/components/public-site/site-chrome";
 import {
   createInstitution,
   deleteGalleryPhoto,
+  deleteHeroImage,
   deleteInstitution,
   deleteSiteDocument,
   fetchGalleryPhotos,
+  fetchHeroImages,
   fetchInstitutions,
   fetchSchoolProfile,
   fetchSiteDocuments,
+  reorderHeroImage,
   updateInstitution,
   updateSchoolProfile,
   uploadGalleryPhoto,
@@ -32,9 +35,10 @@ import {
 } from "@/lib/website-api";
 import { ApiError } from "@/lib/api";
 
-type Tab = "profile" | "institutions" | "gallery" | "documents";
+type Tab = "profile" | "hero" | "institutions" | "gallery" | "documents";
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: "profile", label: "School profile" },
+  { id: "hero", label: "Hero carousel" },
   { id: "institutions", label: "Institutions" },
   { id: "gallery", label: "Photo gallery" },
   { id: "documents", label: "Documents" },
@@ -83,7 +87,6 @@ function ProfileTab() {
   const queryClient = useQueryClient();
   const profile = useQuery({ queryKey: ["website-profile"], queryFn: fetchSchoolProfile });
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const heroInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     schoolName: "",
@@ -136,16 +139,6 @@ function ProfileTab() {
     onError: (error) => toast.error(error instanceof ApiError ? error.message : "Couldn't upload logo"),
   });
 
-  const heroUpload = useMutation({
-    mutationFn: (file: File) => uploadHeroImage(file),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["website-profile"] });
-      toast.success("Hero image updated");
-    },
-    onError: (error) =>
-      toast.error(error instanceof ApiError ? error.message : "Couldn't upload hero image"),
-  });
-
   const field = (key: keyof typeof form) => ({
     value: form[key],
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -165,50 +158,30 @@ function ProfileTab() {
           save.mutate();
         }}
       >
-        <div className="two-fields" style={{ alignItems: "center" }}>
-          <label>
-            Logo
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-              <img
-                src={resolveLogoUrl(profile.data?.logoUrl)}
-                alt="Logo preview"
-                style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
-              />
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                style={{ display: "none" }}
-                onChange={(e) => e.target.files?.[0] && logoUpload.mutate(e.target.files[0])}
-              />
-              <Button type="button" size="sm" variant="outline" onClick={() => logoInputRef.current?.click()}>
-                <Upload size={14} />
-                {logoUpload.isPending ? "Uploading…" : "Change logo"}
-              </Button>
-            </div>
-          </label>
-          <label>
-            Hero / campus photo
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
-              <input
-                ref={heroInputRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                style={{ display: "none" }}
-                onChange={(e) => e.target.files?.[0] && heroUpload.mutate(e.target.files[0])}
-              />
-              <Button type="button" size="sm" variant="outline" onClick={() => heroInputRef.current?.click()}>
-                <Upload size={14} />
-                {heroUpload.isPending ? "Uploading…" : "Change hero photo"}
-              </Button>
-              {profile.data?.heroImageUrl && (
-                <span className="muted-cell" style={{ fontSize: 11 }}>
-                  Custom photo set
-                </span>
-              )}
-            </div>
-          </label>
-        </div>
+        <label>
+          Logo
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 4 }}>
+            <img
+              src={resolveLogoUrl(profile.data?.logoUrl)}
+              alt="Logo preview"
+              style={{ width: 46, height: 46, borderRadius: "50%", objectFit: "cover" }}
+            />
+            <input
+              ref={logoInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              style={{ display: "none" }}
+              onChange={(e) => e.target.files?.[0] && logoUpload.mutate(e.target.files[0])}
+            />
+            <Button type="button" size="sm" variant="outline" onClick={() => logoInputRef.current?.click()}>
+              <Upload size={14} />
+              {logoUpload.isPending ? "Uploading…" : "Change logo"}
+            </Button>
+          </div>
+        </label>
+        <p className="muted-cell" style={{ fontSize: 12, margin: "-8px 0 0" }}>
+          The homepage hero carousel has its own tab now — see "Hero carousel" above.
+        </p>
         <div className="two-fields">
           <label>
             School name
@@ -423,6 +396,118 @@ function InstitutionsTab() {
   );
 }
 
+function HeroTab() {
+  const queryClient = useQueryClient();
+  const heroImages = useQuery({ queryKey: ["website-hero-images"], queryFn: fetchHeroImages });
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const upload = useMutation({
+    mutationFn: (file: File) => uploadHeroImage(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["website-hero-images"] });
+      toast.success("Slide added to the hero carousel");
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Couldn't upload image"),
+  });
+
+  const reorder = useMutation({
+    mutationFn: ({ id, sortOrder }: { id: number; sortOrder: number }) => reorderHeroImage(id, sortOrder),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["website-hero-images"] }),
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Couldn't reorder slide"),
+  });
+
+  const remove = useMutation({
+    mutationFn: (id: number) => deleteHeroImage(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["website-hero-images"] });
+      toast.success("Slide removed");
+      setDeletingId(null);
+    },
+    onError: (error) => toast.error(error instanceof ApiError ? error.message : "Couldn't delete slide"),
+  });
+
+  return (
+    <Panel>
+      <div className="panel-title">
+        <h2>Hero carousel</h2>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          style={{ display: "none" }}
+          onChange={(e) => e.target.files?.[0] && upload.mutate(e.target.files[0])}
+        />
+        <Button size="sm" onClick={() => fileInputRef.current?.click()} disabled={upload.isPending}>
+          <Upload size={14} />
+          {upload.isPending ? "Uploading…" : "Add slide"}
+        </Button>
+      </div>
+      <div style={{ padding: 16 }}>
+        <p className="muted-cell" style={{ fontSize: 12, margin: "0 0 12px" }}>
+          These images rotate automatically every few seconds on the homepage. Lower "Order" shows first.
+        </p>
+        {heroImages.isLoading && <p className="muted-cell">Loading…</p>}
+        {heroImages.data?.length === 0 && (
+          <p className="muted-cell" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Images size={16} /> No slides yet — the homepage falls back to a default photo until you add one.
+          </p>
+        )}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+            gap: 12,
+          }}
+        >
+          {heroImages.data?.map((image) => (
+            <div key={image.id} style={{ position: "relative" }}>
+              <img
+                src={resolvePublicAssetUrl(image.imageUrl)}
+                alt=""
+                style={{ width: "100%", height: 110, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
+              />
+              <Button
+                size="icon"
+                variant="destructive"
+                style={{ position: "absolute", top: 6, right: 6, width: 28, height: 28 }}
+                onClick={() => setDeletingId(image.id)}
+                aria-label="Delete slide"
+              >
+                <Trash2 size={14} />
+              </Button>
+              <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                <span className="muted-cell" style={{ fontSize: 11 }}>
+                  Order
+                </span>
+                <input
+                  type="number"
+                  defaultValue={image.sortOrder}
+                  style={{ width: 56, fontSize: 12, padding: "2px 6px" }}
+                  onBlur={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (!Number.isNaN(value) && value !== image.sortOrder) {
+                      reorder.mutate({ id: image.id, sortOrder: value });
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <ConfirmDeleteDialog
+        open={deletingId !== null}
+        title="Delete this slide?"
+        description="This removes the image from the homepage's hero carousel. This cannot be undone."
+        pending={remove.isPending}
+        onConfirm={() => deletingId !== null && remove.mutate(deletingId)}
+        onOpenChange={(open) => !open && setDeletingId(null)}
+      />
+    </Panel>
+  );
+}
+
 function GalleryTab() {
   const queryClient = useQueryClient();
   const gallery = useQuery({ queryKey: ["website-gallery"], queryFn: fetchGalleryPhotos });
@@ -627,6 +712,7 @@ export function WebsiteManagePage() {
         ))}
       </div>
       {tab === "profile" && <ProfileTab />}
+      {tab === "hero" && <HeroTab />}
       {tab === "institutions" && <InstitutionsTab />}
       {tab === "gallery" && <GalleryTab />}
       {tab === "documents" && <DocumentsTab />}

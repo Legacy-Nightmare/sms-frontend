@@ -32,8 +32,14 @@ export interface SchoolProfileDto {
   linkedinUrl: string | null;
   xUrl: string | null;
   logoUrl: string | null;
-  heroImageUrl: string | null;
   updatedAt: string;
+}
+
+export interface HeroImageDto {
+  id: number;
+  imageUrl: string;
+  sortOrder: number;
+  createdAt: string;
 }
 
 export interface InstitutionDto {
@@ -67,6 +73,7 @@ export interface PublicSiteDto {
   institutions: InstitutionDto[];
   gallery: GalleryPhotoDto[];
   documents: SiteDocumentDto[];
+  heroImages: HeroImageDto[];
 }
 
 export function fetchPublicSite() {

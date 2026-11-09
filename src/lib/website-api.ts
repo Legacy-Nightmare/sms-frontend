@@ -1,6 +1,7 @@
 import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "@/lib/api";
 import type {
   GalleryPhotoDto,
+  HeroImageDto,
   InstitutionDto,
   SchoolProfileDto,
   SiteDocumentDto,
@@ -8,6 +9,7 @@ import type {
 
 export type {
   GalleryPhotoDto,
+  HeroImageDto,
   InstitutionDto,
   SchoolProfileDto,
   SiteDocumentDto,
@@ -41,10 +43,22 @@ export function uploadSchoolLogo(file: File) {
   return apiUpload<SchoolProfileDto>("/website/profile/logo", formData);
 }
 
+export function fetchHeroImages() {
+  return apiGet<HeroImageDto[]>("/website/hero-images");
+}
+
 export function uploadHeroImage(file: File) {
   const formData = new FormData();
   formData.append("image", file);
-  return apiUpload<SchoolProfileDto>("/website/profile/hero-image", formData);
+  return apiUpload<HeroImageDto>("/website/hero-images", formData);
+}
+
+export function reorderHeroImage(id: number, sortOrder: number) {
+  return apiPut<HeroImageDto>(`/website/hero-images/${id}`, { sortOrder });
+}
+
+export function deleteHeroImage(id: number) {
+  return apiDelete<void>(`/website/hero-images/${id}`);
 }
 
 export function fetchInstitutions() {
