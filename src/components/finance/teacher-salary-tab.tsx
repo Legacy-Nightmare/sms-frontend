@@ -33,7 +33,6 @@ const now = new Date();
 function GenerateSalaryDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [amountDue, setAmountDue] = useState("");
   const [periodMonth, setPeriodMonth] = useState(String(now.getMonth() + 1));
   const [periodYear, setPeriodYear] = useState(String(now.getFullYear()));
   const [selectedTeacherIds, setSelectedTeacherIds] = useState<number[]>([]);
@@ -46,17 +45,17 @@ function GenerateSalaryDialog() {
         teacherIds: selectedTeacherIds.length
           ? selectedTeacherIds
           : (teachers.data ?? []).map((t) => t.id),
-        amountDue: parseInt(amountDue, 10),
         periodMonth: parseInt(periodMonth, 10),
         periodYear: parseInt(periodYear, 10),
       }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["teacher-salaries"] });
       toast.success(
-        `Generated ${res.created} salary record(s)${res.skipped ? `, skipped ${res.skipped} already set` : ""}`,
+        `Generated ${res.created} salary record(s)` +
+          (res.skipped ? `, skipped ${res.skipped} already set` : "") +
+          (res.noSalarySet ? `, ${res.noSalarySet} have no salary set on their profile` : ""),
       );
       setOpen(false);
-      setAmountDue("");
       setSelectedTeacherIds([]);
     },
     onError: (error) =>
@@ -102,16 +101,9 @@ function GenerateSalaryDialog() {
               />
             </label>
           </div>
-          <label>
-            Amount per teacher (৳)
-            <input
-              required
-              type="number"
-              min={1}
-              value={amountDue}
-              onChange={(e) => setAmountDue(e.target.value)}
-            />
-          </label>
+          <p className="muted-cell" style={{ fontSize: 12, margin: 0 }}>
+            Each teacher's own salary (set on their roster profile) is used as the amount due.
+          </p>
           <label>
             Teachers <span className="muted-cell">(none selected = all teachers)</span>
             <div
