@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -15,6 +16,7 @@ import { fetchDashboardSummary, fetchAttendanceTrend } from "@/lib/dashboard-api
 import { fetchRecentAttendance } from "@/lib/attendance-api";
 import { fetchNotices } from "@/lib/notices-api";
 import { fetchClasses } from "@/lib/academics-api";
+import { fetchTeachers } from "@/lib/teachers-api";
 import { WelcomeBanner } from "@/components/welcome-banner";
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
 
@@ -48,6 +50,7 @@ export function DashboardPage() {
   });
   const notices = useQuery({ queryKey: ["notices"], queryFn: fetchNotices });
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
+  const teachers = useQuery({ queryKey: ["teachers"], queryFn: fetchTeachers });
 
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
@@ -70,6 +73,32 @@ export function DashboardPage() {
     color: DONUT_COLORS[i % DONUT_COLORS.length],
   }));
   const classTotal = classDistribution.reduce((sum, c) => sum + c.value, 0);
+
+  // Distinct teachers assigned per class (a teacher teaching two subjects in
+  // the same class still counts once there) — mirrors the student donut's
+  // "count of people per class" framing, just for staff instead of roster.
+  const teacherDistribution = useMemo(() => {
+    const byClass = new Map<number, { className: string; sortOrder: number; teacherIds: Set<number> }>();
+    for (const t of teachers.data ?? []) {
+      for (const a of t.assignments) {
+        const entry = byClass.get(a.classId) ?? {
+          className: a.className,
+          sortOrder: a.classSortOrder,
+          teacherIds: new Set<number>(),
+        };
+        entry.teacherIds.add(t.id);
+        byClass.set(a.classId, entry);
+      }
+    }
+    return Array.from(byClass.values())
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((entry, i) => ({
+        name: entry.className,
+        value: entry.teacherIds.size,
+        color: DONUT_COLORS[i % DONUT_COLORS.length],
+      }));
+  }, [teachers.data]);
+  const teacherTotal = teacherDistribution.reduce((sum, c) => sum + c.value, 0);
 
   return (
     <>
@@ -164,43 +193,85 @@ export function DashboardPage() {
 
         <Panel className="chart-panel">
           <div className="panel-title">
-            <h2>Class-wise Student Distribution</h2>
+            <h2>Class-wise Distribution</h2>
           </div>
-          <div className="donut-wrap">
-            <div className="donut-chart">
-              {classDistribution.length > 0 && (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={classDistribution}
-                      dataKey="value"
-                      innerRadius={48}
-                      outerRadius={70}
-                      paddingAngle={2}
-                      isAnimationActive={false}
-                    >
-                      {classDistribution.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} stroke="none" />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              )}
-              <div className="donut-center">
-                <strong>{classTotal}</strong>
-                <small>Students</small>
+          <div className="donut-split">
+            <div className="donut-split-col">
+              <p className="donut-split-label">Students</p>
+              <div className="donut-chart donut-chart-sm">
+                {classDistribution.length > 0 && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={classDistribution}
+                        dataKey="value"
+                        innerRadius={32}
+                        outerRadius={48}
+                        paddingAngle={2}
+                        isAnimationActive={false}
+                      >
+                        {classDistribution.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} stroke="none" />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <div className="donut-center">
+                  <strong>{classTotal}</strong>
+                  <small>Students</small>
+                </div>
               </div>
+              <ul className="donut-legend donut-legend-sm">
+                {classDistribution.map((entry) => (
+                  <li key={entry.name}>
+                    <span style={{ background: entry.color }} />
+                    {entry.name}
+                    <b>{entry.value}</b>
+                  </li>
+                ))}
+                {classDistribution.length === 0 && <li className="muted-cell">No classes yet</li>}
+              </ul>
             </div>
-            <ul className="donut-legend">
-              {classDistribution.map((entry) => (
-                <li key={entry.name}>
-                  <span style={{ background: entry.color }} />
-                  {entry.name}
-                  <b>{entry.value}</b>
-                </li>
-              ))}
-              {classDistribution.length === 0 && <li className="muted-cell">No classes yet</li>}
-            </ul>
+            <div className="donut-split-col">
+              <p className="donut-split-label">Teachers</p>
+              <div className="donut-chart donut-chart-sm">
+                {teacherDistribution.length > 0 && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={teacherDistribution}
+                        dataKey="value"
+                        innerRadius={32}
+                        outerRadius={48}
+                        paddingAngle={2}
+                        isAnimationActive={false}
+                      >
+                        {teacherDistribution.map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} stroke="none" />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+                <div className="donut-center">
+                  <strong>{teacherTotal}</strong>
+                  <small>Teachers</small>
+                </div>
+              </div>
+              <ul className="donut-legend donut-legend-sm">
+                {teacherDistribution.map((entry) => (
+                  <li key={entry.name}>
+                    <span style={{ background: entry.color }} />
+                    {entry.name}
+                    <b>{entry.value}</b>
+                  </li>
+                ))}
+                {teacherDistribution.length === 0 && (
+                  <li className="muted-cell">No assignments yet</li>
+                )}
+              </ul>
+            </div>
           </div>
         </Panel>
 
