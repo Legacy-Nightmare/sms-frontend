@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
 import { fetchClasses } from "@/lib/academics-api";
 import { fetchFinanceSummary, fetchFinanceTrend, fetchStudentsWithDues } from "@/lib/finance-api";
@@ -78,11 +79,11 @@ export function FinanceReportTab() {
         >
           <label>
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
           </label>
           <label>
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
           </label>
           <label style={{ minWidth: 180 }}>
             Class

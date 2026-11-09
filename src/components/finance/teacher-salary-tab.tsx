@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge, Panel } from "@/components/dashboard-ui";
 import { ApiError } from "@/lib/api";
 import { fetchTeachers, type TeacherDto } from "@/lib/teachers-api";
@@ -336,7 +337,7 @@ function SalaryDetailDialog({ id, onClose }: { id: number; onClose: () => void }
                 </label>
                 <label>
                   Payment date
-                  <input required type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+                  <DateInput required value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
                 </label>
                 <label>
                   Reference / Note <span className="muted-cell">(optional)</span>

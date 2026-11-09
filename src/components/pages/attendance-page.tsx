@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Badge, DataTable, EmptyRow, PageHeading, Panel } from "@/components/dashboard-ui";
+import { DateInput } from "@/components/ui/date-input";
 import { StudentAvatar } from "@/components/student-avatar";
 import { fetchClasses } from "@/lib/academics-api";
 import { fetchClassAttendance } from "@/lib/attendance-api";
@@ -73,7 +74,7 @@ export function AttendancePage() {
         </label>
         <label>
           Date
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
         </label>
       </Panel>
       <Panel>

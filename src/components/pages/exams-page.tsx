@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -131,7 +132,7 @@ function CreateExamDialog() {
             </label>
             <label>
               Date
-              <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+              <DateInput value={examDate} onChange={(e) => setExamDate(e.target.value)} />
             </label>
           </div>
           <div className="two-fields">
@@ -236,7 +237,7 @@ function EditExamDialog({
               </label>
               <label>
                 Date
-                <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+                <DateInput value={examDate} onChange={(e) => setExamDate(e.target.value)} />
               </label>
             </div>
             <div className="two-fields">

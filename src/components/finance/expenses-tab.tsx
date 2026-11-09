@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
 import { createExpense, fetchExpenses, voidExpense } from "@/lib/finance-api";
 import { ApiError } from "@/lib/api";
@@ -82,7 +83,7 @@ function AddExpenseDialog() {
           </div>
           <label>
             Date
-            <input required type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <DateInput required value={date} onChange={(e) => setDate(e.target.value)} />
           </label>
           <label>
             Note <span className="muted-cell">(optional)</span>
@@ -147,11 +148,11 @@ export function ExpensesTab() {
         >
           <label>
             From
-            <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
           </label>
           <label>
             To
-            <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
           </label>
           <div style={{ flex: 1 }} />
           <AddExpenseDialog />
