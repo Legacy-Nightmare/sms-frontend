@@ -55,7 +55,7 @@ export function AttendancePage() {
           >
             {classes.data?.map((c) => (
               <option key={c.id} value={c.id}>
-                Class {c.level}
+                {c.name}
               </option>
             ))}
           </select>
@@ -79,7 +79,7 @@ export function AttendancePage() {
       <Panel>
         <div className="panel-title">
           <h2>
-            {selectedClass ? `Class ${selectedClass.level}` : "Class"} · {sectionLabel} —{" "}
+            {selectedClass ? selectedClass.name : "Class"} · {sectionLabel} —{" "}
             {format(new Date(date), "d MMMM yyyy")}
           </h2>
           <Badge>

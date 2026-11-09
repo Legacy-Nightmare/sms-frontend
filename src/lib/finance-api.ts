@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from "@/lib/api";
+import type { TeacherDto } from "@/lib/teachers-api";
 
 export type PaymentMethod = "cash" | "bank" | "bkash" | "nagad" | "other";
 export type FeeStatus = "PAID" | "PARTIAL" | "UNPAID";
@@ -54,6 +55,7 @@ export interface TeacherSalaryDto {
   id: number;
   teacherId: number;
   teacherName: string;
+  teacherSubject: string | null;
   amountDue: number;
   paid: number;
   remaining: number;
@@ -164,8 +166,7 @@ export const voidStudentPayment = (paymentId: number, reason: string) =>
 
 // ---- teacher salary + payments ----
 
-export const fetchTeachers = () =>
-  apiGet<Array<{ id: number; name: string; email: string }>>("/finance/teachers");
+export const fetchTeachers = () => apiGet<TeacherDto[]>("/finance/teachers");
 
 export function fetchTeacherSalaries(filters: {
   teacherId?: number | undefined;
@@ -193,12 +194,18 @@ export const createTeacherSalary = (input: {
   note?: string | undefined;
 }) => apiPost<TeacherSalaryDto>("/finance/teacher-salaries", input);
 
+// Each teacher's own `salary` (set on their roster profile) is used as the
+// amount due — there's no shared amount to pass in, teachers are paid
+// differently.
 export const bulkGenerateSalary = (input: {
   teacherIds: number[];
-  amountDue: number;
   periodMonth: number;
   periodYear: number;
-}) => apiPost<{ created: number; skipped: number }>("/finance/teacher-salaries/bulk", input);
+}) =>
+  apiPost<{ created: number; skipped: number; noSalarySet: number }>(
+    "/finance/teacher-salaries/bulk",
+    input,
+  );
 
 export const recordSalaryPayment = (
   teacherSalaryId: number,

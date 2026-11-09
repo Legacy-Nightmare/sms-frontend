@@ -108,7 +108,7 @@ export function StudentsPage({ onAdd }: { onAdd: () => void }) {
             <option value="">All classes</option>
             {classes.data?.map((c) => (
               <option key={c.id} value={c.id}>
-                Class {c.level}
+                {c.name}
               </option>
             ))}
           </select>
@@ -165,7 +165,7 @@ export function StudentsPage({ onAdd }: { onAdd: () => void }) {
                 <td className="mono muted-cell">{s.biometricId}</td>
                 <td>{s.name}</td>
                 <td>
-                  Class {s.classEntity.level}{" "}
+                  {s.classEntity.name}{" "}
                   <Badge tone={s.section.name === "RUP" ? "amber" : "teal"}>{s.section.name}</Badge>
                 </td>
                 <td>{s.roll}</td>

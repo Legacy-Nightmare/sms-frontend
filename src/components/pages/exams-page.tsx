@@ -124,7 +124,7 @@ function CreateExamDialog() {
                 </option>
                 {classes.data?.map((c) => (
                   <option key={c.id} value={c.id}>
-                    Class {c.level}
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -333,11 +333,11 @@ function DeleteExamDialog({
 function MarksEntryGrid({
   examId,
   classId,
-  classLevel,
+  className,
 }: {
   examId: number;
   classId: number;
-  classLevel: number;
+  className: string;
 }) {
   const queryClient = useQueryClient();
   const [subjectId, setSubjectId] = useState<number | "">("");
@@ -511,7 +511,7 @@ function MarksEntryGrid({
             </select>
           </label>
         )}
-        <AddSubjectDialog classId={classId} classLevel={classLevel} />
+        <AddSubjectDialog classId={classId} className={className} />
       </div>
 
       {subjects.data?.length === 0 && (
@@ -815,7 +815,7 @@ export function ExamsPage() {
             <option value="">All classes</option>
             {classes.data?.map((c) => (
               <option key={c.id} value={c.id}>
-                Class {c.level}
+                {c.name}
               </option>
             ))}
           </select>
@@ -1040,7 +1040,7 @@ export function ExamsPage() {
           <MarksEntryGrid
             examId={selectedExam.id}
             classId={selectedExam.classId}
-            classLevel={selectedExam.classEntity.level}
+            className={selectedExam.classEntity.name}
           />
           <div className="results-footer">
             <div>

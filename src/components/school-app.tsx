@@ -9,7 +9,9 @@ import { AddStudentDrawer } from "@/components/add-student-drawer";
 import { canAccessPage, defaultPageFor } from "@/lib/permissions";
 import { DashboardPage } from "@/components/pages/dashboard-page";
 import { StudentsPage } from "@/components/pages/students-page";
+import { TeachersPage } from "@/components/pages/teachers-page";
 import { ClassesPage } from "@/components/pages/classes-page";
+import { SubjectsPage } from "@/components/pages/subjects-page";
 import { AttendancePage } from "@/components/pages/attendance-page";
 import { ExamsPage } from "@/components/pages/exams-page";
 import { NoticesPage } from "@/components/pages/notices-page";
@@ -54,7 +56,9 @@ export function SchoolApp() {
   const content: Record<Page, ReactNode> = {
     dashboard: <DashboardPage />,
     students: <StudentsPage onAdd={() => setDrawerOpen(true)} />,
+    teachers: <TeachersPage />,
     classes: <ClassesPage />,
+    subjects: <SubjectsPage />,
     attendance: <AttendancePage />,
     exams: <ExamsPage />,
     notices: <NoticesPage />,

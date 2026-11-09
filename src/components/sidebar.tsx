@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookMarked,
   BookOpen,
   CalendarCheck,
   DoorOpen,
@@ -8,6 +9,7 @@ import {
   LayoutDashboard,
   ShieldCheck,
   Users,
+  UserCog,
   Wallet,
   X,
 } from "lucide-react";
@@ -20,7 +22,9 @@ export type { Page };
 const navItems: Array<{ id: Page; label: string; icon: typeof LayoutDashboard; group: string }> = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, group: "OVERVIEW" },
   { id: "students", label: "Students", icon: Users, group: "ACADEMICS" },
+  { id: "teachers", label: "Teachers", icon: UserCog, group: "ACADEMICS" },
   { id: "classes", label: "Classes & sections", icon: GraduationCap, group: "ACADEMICS" },
+  { id: "subjects", label: "Subjects", icon: BookMarked, group: "ACADEMICS" },
   { id: "attendance", label: "Attendance", icon: CalendarCheck, group: "ACADEMICS" },
   { id: "exams", label: "Exams & results", icon: BookOpen, group: "ACADEMICS" },
   { id: "notices", label: "Notices", icon: Bell, group: "ACADEMICS" },

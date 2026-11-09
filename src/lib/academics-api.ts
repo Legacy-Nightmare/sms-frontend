@@ -9,7 +9,8 @@ export interface SectionDto {
 
 export interface ClassDto {
   id: number;
-  level: number;
+  level: number | null;
+  sortOrder: number;
   name: string;
   tutorialWeightPercent: number;
   finalWeightPercent: number;
@@ -25,8 +26,19 @@ export function fetchSections(classId: number) {
   return apiGet<SectionDto[]>(`/sections?classId=${classId}`);
 }
 
-export function createClass(input: { level: number; name: string }) {
+export function createClass(input: {
+  name: string;
+  level?: number | undefined;
+  sortOrder?: number | undefined;
+}) {
   return apiPost<ClassDto>("/classes", input);
+}
+
+export function updateClass(
+  classId: number,
+  input: { name?: string | undefined; level?: number | null | undefined; sortOrder?: number | undefined },
+) {
+  return apiPut<ClassDto>(`/classes/${classId}`, input);
 }
 
 export function createSection(input: { name: string; classId: number }) {
