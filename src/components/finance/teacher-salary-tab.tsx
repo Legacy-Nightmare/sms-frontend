@@ -318,7 +318,14 @@ function SalaryDetailDialog({ id, onClose }: { id: number; onClose: () => void }
                 </label>
                 <label>
                   Payment method
-                  <div style={{ display: "grid", gap: 8, marginTop: 4 }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))",
+                      gap: 8,
+                      marginTop: 4,
+                    }}
+                  >
                     {(Object.keys(methodLabel) as PaymentMethod[]).map((m) => (
                       <label key={m} className={method === m ? "radio-option selected" : "radio-option"}>
                         <input type="radio" name="method" checked={method === m} onChange={() => setMethod(m)} />

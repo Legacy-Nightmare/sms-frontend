@@ -284,7 +284,7 @@ select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
 .salary-row:last-child { border-bottom: 0; }
 .salary-row:hover { background: color-mix(in oklab, var(--foreground) 3%, transparent); }
 
-.radio-option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 13px; }
+.radio-option { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 13px; }
 .radio-option input { width: auto; margin: 0; accent-color: var(--teal); }
 .radio-option.selected { border-color: var(--teal); background: color-mix(in oklab, var(--teal) 10%, var(--panel)); }
 
