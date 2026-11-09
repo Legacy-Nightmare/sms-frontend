@@ -1,3 +1,6 @@
+import { useState, type FormEvent } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   Bell,
   BookMarked,
@@ -6,7 +9,9 @@ import {
   DoorOpen,
   Globe,
   GraduationCap,
+  KeyRound,
   LayoutDashboard,
+  Settings,
   ShieldCheck,
   Users,
   UserCog,
@@ -14,7 +19,21 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ApiError } from "@/lib/api";
+import { changePassword, useAuth } from "@/lib/auth";
 import { canAccessPage, type Page } from "@/lib/permissions";
 
 export type { Page };
@@ -32,6 +51,102 @@ const navItems: Array<{ id: Page; label: string; icon: typeof LayoutDashboard; g
   { id: "staff", label: "Staff accounts", icon: ShieldCheck, group: "ADMINISTRATION" },
   { id: "website", label: "Website manage", icon: Globe, group: "ADMINISTRATION" },
 ];
+
+function ChangePasswordDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const reset = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const mutation = useMutation({
+    mutationFn: () => changePassword(currentPassword, newPassword),
+    onSuccess: () => {
+      toast.success("Password changed");
+      reset();
+      onOpenChange(false);
+    },
+    onError: (error) =>
+      toast.error(error instanceof ApiError ? error.message : "Couldn't change password"),
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) reset();
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent style={{ maxWidth: 420 }}>
+        <DialogHeader>
+          <DialogTitle>Change password</DialogTitle>
+        </DialogHeader>
+        <form
+          className="student-form"
+          onSubmit={(event: FormEvent) => {
+            event.preventDefault();
+            if (newPassword !== confirmPassword) {
+              toast.error("New passwords don't match");
+              return;
+            }
+            mutation.mutate();
+          }}
+        >
+          <label>
+            Current password
+            <input
+              required
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            New password
+            <input
+              required
+              type="password"
+              minLength={6}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            Confirm new password
+            <input
+              required
+              type="password"
+              minLength={6}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </label>
+          <div className="drawer-actions">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving…" : "Change password"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function initials(name: string) {
   return name
@@ -54,6 +169,7 @@ export function Sidebar({
   closeMobile: () => void;
 }) {
   const { user, logout } = useAuth();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const visibleItems = navItems.filter((item) => canAccessPage(user?.role, item.id));
   const roleLabel = user?.role === "admin" ? "Admin" : user?.role === "finance" ? "Finance Officer" : "Teacher";
   let previousGroup = "";
@@ -101,11 +217,25 @@ export function Sidebar({
             <small>{roleLabel}</small>
           </p>
         </div>
-        <Button variant="ghost" className="signout" onClick={logout}>
-          <DoorOpen />
-          Sign out
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" aria-label="Account settings">
+              <Settings />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+              <KeyRound />
+              Change password
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>
+              <DoorOpen />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+      <ChangePasswordDialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen} />
     </aside>
   );
 }

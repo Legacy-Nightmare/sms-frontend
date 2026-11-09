@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { apiGet, apiPost, clearToken, getToken, setToken, setUnauthorizedHandler } from "@/lib/api";
+import { apiGet, apiPost, apiPut, clearToken, getToken, setToken, setUnauthorizedHandler } from "@/lib/api";
 
 export type Role = "admin" | "teacher" | "finance";
 
@@ -54,6 +54,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+}
+
+export function changePassword(currentPassword: string, newPassword: string) {
+  return apiPut<{ success: boolean }>("/auth/change-password", {
+    currentPassword,
+    newPassword,
+  });
 }
 
 export function useAuth() {
