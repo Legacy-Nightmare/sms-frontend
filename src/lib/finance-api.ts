@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "@/lib/api";
+import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 import type { TeacherDto } from "@/lib/teachers-api";
 
 export type PaymentMethod = "cash" | "bank" | "bkash" | "nagad" | "other";
@@ -151,6 +151,31 @@ export const bulkApplyStudentFee = (input: {
   periodYear?: number | undefined;
   note?: string | undefined;
 }) => apiPost<{ created: number; skipped: number }>("/finance/student-fees/bulk", input);
+
+export const createMultiStudentFee = (input: {
+  studentId: number;
+  periodMonth?: number | undefined;
+  periodYear?: number | undefined;
+  note?: string | undefined;
+  fees: Array<{ name: string; amount: number }>;
+}) =>
+  apiPost<{ created: Array<{ id: number; name: string; amount: number }>; skipped: string[] }>(
+    "/finance/student-fees/multi",
+    input,
+  );
+
+export const updateStudentFee = (
+  id: number,
+  input: {
+    amountDue?: number | undefined;
+    periodMonth?: number | null | undefined;
+    periodYear?: number | null | undefined;
+    note?: string | null | undefined;
+  },
+) => apiPut<StudentFeeDto>(`/finance/student-fees/${id}`, input);
+
+export const deleteStudentFee = (id: number) =>
+  apiDelete<{ success: true } | void>(`/finance/student-fees/${id}`);
 
 export const recordStudentPayment = (
   studentFeeId: number,
