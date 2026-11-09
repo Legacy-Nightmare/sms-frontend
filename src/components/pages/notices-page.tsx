@@ -88,7 +88,7 @@ function EditNoticeDialog({
                 <option value="">All classes</option>
                 {classes.data?.map((c) => (
                   <option key={c.id} value={c.id}>
-                    Class {c.level}
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -313,7 +313,7 @@ export function NoticesPage() {
                 <option value="">All classes</option>
                 {classes.data?.map((c) => (
                   <option key={c.id} value={c.id}>
-                    Class {c.level}
+                    {c.name}
                   </option>
                 ))}
               </select>

@@ -203,7 +203,7 @@ export function EditStudentDrawer({
                   </option>
                   {classes.data?.map((c) => (
                     <option key={c.id} value={c.id}>
-                      Class {c.level}
+                      {c.name}
                     </option>
                   ))}
                 </select>

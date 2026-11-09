@@ -6,6 +6,7 @@ export interface SubjectDto {
   id: number;
   name: string;
   classId: number;
+  subjectId: number;
   fullMarks: number;
 }
 
@@ -20,7 +21,7 @@ export interface ExamDto {
   emailedCount: number;
   resultsAnnouncedAt: string | null;
   createdAt: string;
-  classEntity: { id: number; level: number; name: string };
+  classEntity: { id: number; level: number | null; name: string };
 }
 
 export interface MarksSheetRowDto {
@@ -70,11 +71,25 @@ export function fetchSubjects(classId: number) {
   return apiGet<SubjectDto[]>(`/subjects?classId=${classId}`);
 }
 
-export function createSubject(input: { name: string; classId: number; fullMarks?: number }) {
+export interface ClassSubjectDto {
+  id: number;
+  name: string;
+  fullMarks: number;
+  classId: number;
+  classLevel: number | null;
+  className: string;
+  classSortOrder: number;
+}
+
+export function fetchAllClassSubjects() {
+  return apiGet<ClassSubjectDto[]>("/subjects/all");
+}
+
+export function createSubject(input: { subjectId: number; classId: number; fullMarks?: number }) {
   return apiPost<SubjectDto>("/subjects", input);
 }
 
-export function updateSubject(subjectId: number, input: { name?: string; fullMarks?: number }) {
+export function updateSubject(subjectId: number, input: { fullMarks: number }) {
   return apiPut<SubjectDto>(`/subjects/${subjectId}`, input);
 }
 

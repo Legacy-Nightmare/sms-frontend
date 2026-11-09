@@ -34,7 +34,7 @@ export interface StudentDto {
   photoUrl: string | null;
   isActive: boolean;
   guardians: GuardianDto[];
-  classEntity: { id: number; level: number; name: string };
+  classEntity: { id: number; level: number | null; name: string };
   section: { id: number; name: string; classId: number };
   createdAt: string;
 }

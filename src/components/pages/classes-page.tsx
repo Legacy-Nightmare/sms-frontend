@@ -16,6 +16,7 @@ import {
   createSection,
   deleteSection,
   fetchClasses,
+  updateClass,
   updateResultWeights,
   updateSection,
   type ClassDto,
@@ -27,6 +28,7 @@ import {
   updateSubject,
   type SubjectDto,
 } from "@/lib/exams-api";
+import { fetchSubjectCatalog } from "@/lib/subjects-catalog-api";
 import { ApiError } from "@/lib/api";
 
 const classTones = [
@@ -49,8 +51,9 @@ function errorMessage(error: unknown, fallback: string): string {
 function AddClassDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [level, setLevel] = useState("");
   const [name, setName] = useState("");
+  const [level, setLevel] = useState("");
+  const [order, setOrder] = useState("");
 
   const mutation = useMutation({
     mutationFn: createClass,
@@ -58,15 +61,20 @@ function AddClassDialog() {
       queryClient.invalidateQueries({ queryKey: ["classes"] });
       toast.success(`Class ${name} added`);
       setOpen(false);
-      setLevel("");
       setName("");
+      setLevel("");
+      setOrder("");
     },
     onError: (error) => toast.error(errorMessage(error, "Couldn't add class")),
   });
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    mutation.mutate({ level: parseInt(level, 10), name });
+    mutation.mutate({
+      name,
+      level: level ? parseInt(level, 10) : undefined,
+      sortOrder: order ? parseInt(order, 10) : undefined,
+    });
   };
 
   return (
@@ -80,29 +88,34 @@ function AddClassDialog() {
           <DialogTitle>Add class</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="student-form">
-          <div className="two-fields">
-            <label>
-              Level
-              <input
-                required
-                type="number"
-                min={1}
-                max={10}
-                value={level}
-                onChange={(e) => setLevel(e.target.value)}
-                placeholder="11"
-              />
-            </label>
-            <label>
-              Name
-              <input
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Class 11"
-              />
-            </label>
-          </div>
+          <label>
+            Name
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Class 11, Play, KG, Nursery…"
+            />
+          </label>
+          <label>
+            Level <span className="muted-cell">(optional, numbered classes only)</span>
+            <input
+              type="number"
+              min={1}
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              placeholder="11"
+            />
+          </label>
+          <label>
+            Order <span className="muted-cell">(optional)</span>
+            <input
+              type="number"
+              value={order}
+              onChange={(e) => setOrder(e.target.value)}
+              placeholder="Defaults to end of list"
+            />
+          </label>
           <div className="drawer-actions">
             <DialogClose asChild>
               <Button type="button" variant="outline">
@@ -127,9 +140,9 @@ interface SectionRow {
 
 interface SubjectRow {
   id?: number;
+  subjectId: number | "";
   name: string;
   fullMarks: number;
-  originalName?: string;
   originalFullMarks?: number;
 }
 
@@ -145,6 +158,9 @@ function EditClassDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [level, setLevel] = useState("");
+  const [order, setOrder] = useState("");
   const [tutorialWeight, setTutorialWeight] = useState("20");
   const [sections, setSections] = useState<SectionRow[]>([]);
   const [deletedSectionIds, setDeletedSectionIds] = useState<number[]>([]);
@@ -156,6 +172,11 @@ function EditClassDialog({
   const subjectsQuery = useQuery({
     queryKey: ["subjects", classItem?.id],
     queryFn: () => fetchSubjects(classItem!.id),
+    enabled: !!classItem,
+  });
+  const catalogQuery = useQuery({
+    queryKey: ["subject-catalog"],
+    queryFn: fetchSubjectCatalog,
     enabled: !!classItem,
   });
 
@@ -170,6 +191,9 @@ function EditClassDialog({
   // while already open (classItem itself doesn't change then).
   useEffect(() => {
     if (classItem) {
+      setName(classItem.name);
+      setLevel(classItem.level != null ? String(classItem.level) : "");
+      setOrder(String(classItem.sortOrder));
       setTutorialWeight(String(classItem.tutorialWeightPercent));
       setSections(classItem.sections.map((s) => ({ id: s.id, name: s.name, originalName: s.name })));
       setDeletedSectionIds([]);
@@ -192,9 +216,9 @@ function EditClassDialog({
       setSubjects(
         subjectsQuery.data.map((s: SubjectDto) => ({
           id: s.id,
+          subjectId: s.subjectId,
           name: s.name,
           fullMarks: s.fullMarks,
-          originalName: s.name,
           originalFullMarks: s.fullMarks,
         })),
       );
@@ -227,6 +251,25 @@ function EditClassDialog({
   const handleSave = async () => {
     setSaving(true);
     const errors: string[] = [];
+
+    const trimmedName = name.trim();
+    const newLevel = level.trim() ? parseInt(level, 10) : null;
+    const newOrder = parseInt(order, 10);
+    if (
+      trimmedName !== classItem.name ||
+      newLevel !== classItem.level ||
+      (!Number.isNaN(newOrder) && newOrder !== classItem.sortOrder)
+    ) {
+      try {
+        await updateClass(classItem.id, {
+          name: trimmedName !== classItem.name ? trimmedName : undefined,
+          level: newLevel !== classItem.level ? newLevel : undefined,
+          sortOrder: !Number.isNaN(newOrder) && newOrder !== classItem.sortOrder ? newOrder : undefined,
+        });
+      } catch (error) {
+        errors.push(errorMessage(error, "Couldn't update class details"));
+      }
+    }
 
     const newTutorial = parseInt(tutorialWeight, 10);
     if (!Number.isNaN(newTutorial) && newTutorial !== classItem.tutorialWeightPercent) {
@@ -273,19 +316,23 @@ function EditClassDialog({
       }
     }
     for (const subject of subjects) {
-      const name = subject.name.trim();
-      if (!name) continue;
-      if (subject.id && (name !== subject.originalName || subject.fullMarks !== subject.originalFullMarks)) {
-        try {
-          await updateSubject(subject.id, { name, fullMarks: subject.fullMarks });
-        } catch (error) {
-          errors.push(errorMessage(error, `Couldn't update subject "${subject.originalName}"`));
+      if (subject.id) {
+        if (subject.fullMarks !== subject.originalFullMarks) {
+          try {
+            await updateSubject(subject.id, { fullMarks: subject.fullMarks });
+          } catch (error) {
+            errors.push(errorMessage(error, `Couldn't update subject "${subject.name}"`));
+          }
         }
-      } else if (!subject.id) {
+      } else if (subject.subjectId !== "") {
         try {
-          await createSubject({ name, classId: classItem.id, fullMarks: subject.fullMarks || 100 });
+          await createSubject({
+            subjectId: subject.subjectId,
+            classId: classItem.id,
+            fullMarks: subject.fullMarks || 100,
+          });
         } catch (error) {
-          errors.push(errorMessage(error, `Couldn't add subject "${name}"`));
+          errors.push(errorMessage(error, `Couldn't add subject "${subject.name}"`));
         }
       }
     }
@@ -297,7 +344,7 @@ function EditClassDialog({
     if (errors.length > 0) {
       errors.forEach((message) => toast.error(message));
     } else {
-      toast.success(`Class ${classItem.level} updated`);
+      toast.success(`${classItem.name} updated`);
     }
     onOpenChange(false);
   };
@@ -306,9 +353,30 @@ function EditClassDialog({
     <Dialog open={!!classItem} onOpenChange={onOpenChange}>
       <DialogContent style={{ maxWidth: 520, maxHeight: "85vh", overflowY: "auto" }}>
         <DialogHeader>
-          <DialogTitle>Edit Class {classItem.level}</DialogTitle>
+          <DialogTitle>Edit {classItem.name}</DialogTitle>
         </DialogHeader>
         <div className="student-form">
+          <label>
+            Name
+            <input value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label>
+            Level <span className="muted-cell">(optional, numbered classes only)</span>
+            <input
+              type="number"
+              min={1}
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              placeholder="Leave blank for Play/KG/Nursery"
+            />
+          </label>
+          <label>
+            Order
+            <input type="number" value={order} onChange={(e) => setOrder(e.target.value)} />
+          </label>
+
+          <hr />
+
           <label>
             Result weight — Tutorial (%)
             <input
@@ -366,48 +434,84 @@ function EditClassDialog({
           <div>
             <p className="editable-row-label">Subjects</p>
             {subjectsQuery.isLoading && <p className="muted-cell" style={{ fontSize: 12 }}>Loading…</p>}
-            {subjects.map((subject, index) => (
-              <div className="editable-row" key={subject.id ?? `new-${index}`}>
-                <input
-                  type="text"
-                  value={subject.name}
-                  onChange={(e) =>
-                    setSubjects((prev) =>
-                      prev.map((s, i) => (i === index ? { ...s, name: e.target.value } : s)),
-                    )
-                  }
-                  placeholder="Subject name"
-                />
-                <input
-                  type="number"
-                  min={1}
-                  className="fullmarks-input"
-                  value={subject.fullMarks}
-                  onChange={(e) =>
-                    setSubjects((prev) =>
-                      prev.map((s, i) =>
-                        i === index ? { ...s, fullMarks: parseInt(e.target.value, 10) || 0 } : s,
-                      ),
-                    )
-                  }
-                  title="Full marks"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  title="Remove subject"
-                  onClick={() => removeSubjectRow(index)}
-                >
-                  <Trash2 size={15} />
-                </Button>
-              </div>
-            ))}
+            {subjects.map((subject, index) => {
+              const chosenElsewhere = new Set(
+                subjects
+                  .filter((_, i) => i !== index)
+                  .map((s) => s.subjectId)
+                  .filter((id) => id !== ""),
+              );
+              const availableCatalog = (catalogQuery.data ?? []).filter(
+                (c) => !chosenElsewhere.has(c.id),
+              );
+              return (
+                <div className="editable-row" key={subject.id ?? `new-${index}`}>
+                  {subject.id ? (
+                    <input type="text" value={subject.name} readOnly disabled />
+                  ) : (
+                    <select
+                      value={subject.subjectId}
+                      onChange={(e) => {
+                        const newId = e.target.value ? parseInt(e.target.value, 10) : "";
+                        const picked = (catalogQuery.data ?? []).find((c) => c.id === newId);
+                        setSubjects((prev) =>
+                          prev.map((s, i) =>
+                            i === index
+                              ? {
+                                  ...s,
+                                  subjectId: newId,
+                                  name: picked?.name ?? "",
+                                  fullMarks: picked?.defaultFullMarks ?? 100,
+                                }
+                              : s,
+                          ),
+                        );
+                      }}
+                    >
+                      <option value="">Select subject…</option>
+                      {availableCatalog.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <input
+                    type="number"
+                    min={1}
+                    className="fullmarks-input"
+                    value={subject.fullMarks}
+                    onChange={(e) =>
+                      setSubjects((prev) =>
+                        prev.map((s, i) =>
+                          i === index ? { ...s, fullMarks: parseInt(e.target.value, 10) || 0 } : s,
+                        ),
+                      )
+                    }
+                    title="Full marks"
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    title="Remove subject"
+                    onClick={() => removeSubjectRow(index)}
+                  >
+                    <Trash2 size={15} />
+                  </Button>
+                </div>
+              );
+            })}
+            {catalogQuery.data?.length === 0 && (
+              <p className="muted-cell" style={{ fontSize: 12 }}>
+                No subjects in the catalog yet — add one from the Subjects page first.
+              </p>
+            )}
             <Button
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => setSubjects((prev) => [...prev, { name: "", fullMarks: 100 }])}
+              onClick={() => setSubjects((prev) => [...prev, { subjectId: "", name: "", fullMarks: 100 }])}
             >
               <Plus size={14} />
               Add subject
@@ -450,13 +554,13 @@ function ClassCard({
         size="icon"
         variant="outline"
         className="class-card-edit-btn"
-        title={`Edit Class ${classItem.level}`}
+        title={`Edit ${classItem.name}`}
         onClick={onEdit}
       >
         <Pencil size={14} />
       </Button>
       <div>
-        <h2>Class {classItem.level}</h2>
+        <h2>{classItem.name}</h2>
         <span className="mono">{classItem.studentCount} students</span>
       </div>
       <p>
