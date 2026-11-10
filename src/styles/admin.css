@@ -244,6 +244,26 @@ select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
    problem as the select arrow above. Strip that box down to a plain glyph. */
 input[type="date"]::-webkit-calendar-picker-indicator { background: transparent; cursor: pointer; opacity: .55; padding: 0; }
 input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: .9; }
+/* Same mismatched-widget problem again — the native "Choose File" button
+   inside <input type="file"> keeps the OS's own grey button chrome by
+   default. Reskin it as a flush left-hand button inside the same field. */
+input[type="file"] { padding: 0; }
+input[type="file"]::file-selector-button, input[type="file"]::-webkit-file-upload-button {
+  margin: 0 10px 0 0;
+  padding: 0 12px;
+  height: 33px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  border-radius: 6px 0 0 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+input[type="file"]::file-selector-button:hover, input[type="file"]::-webkit-file-upload-button:hover {
+  background: color-mix(in oklab, var(--gold) 12%, var(--background));
+}
 .password-field { position: relative; }
 .password-field input { padding-right: 38px; }
 .password-toggle { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: none; background: transparent; color: var(--muted-foreground); padding: 0; }
