@@ -213,7 +213,12 @@ td { height: 45px; padding: 0 17px; white-space: nowrap; color: var(--foreground
 .editable-row .fullmarks-input { flex: 0 0 72px; }
 .editable-row-label { color: var(--muted-foreground); font-size: 11px; font-weight: 500; margin-bottom: 7px; }
 .filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 16px; margin-bottom: 16px; }
-label { display: flex; flex-direction: column; gap: 7px; color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
+/* justify-content: flex-end pins the actual input/select to the bottom of
+   the label. Grid rows (.two-fields etc.) stretch every label to the
+   tallest sibling's height, so when one label's hint text wraps onto an
+   extra line, its input still lands on the same baseline as the field
+   next to it instead of sitting lower. */
+label { display: flex; flex-direction: column; justify-content: flex-end; gap: 7px; color: var(--muted-foreground); font-size: 11px; font-weight: 500; }
 input, select, textarea { width: 100%; border: 1px solid var(--input); border-radius: 7px; outline: none; background: transparent; color: var(--foreground); padding: 0 13px; }
 input, select { height: 35px; } textarea { min-height: 68px; padding-top: 10px; resize: vertical; }
 input::placeholder, textarea::placeholder { color: oklch(0.62 0.02 262); } input:focus, select:focus, textarea:focus { border-color: var(--gold); }
