@@ -37,6 +37,7 @@ import {
   type FeeStatus,
   type PaymentMethod,
 } from "@/lib/finance-api";
+import { localDateString } from "@/lib/utils";
 
 function money(n: number) {
   return `৳${n.toLocaleString("en-BD")}`;
@@ -166,7 +167,7 @@ function SalaryDetailDialog({ id, onClose }: { id: number; onClose: () => void }
   const d = detail.data;
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("bank");
-  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+  const [paidAt, setPaidAt] = useState(localDateString());
   const [note, setNote] = useState("");
 
   useEffect(() => {

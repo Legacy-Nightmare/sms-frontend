@@ -30,6 +30,7 @@ import {
 } from "@/lib/finance-api";
 import { ApiError } from "@/lib/api";
 import { exportStyledExcel } from "@/lib/excel-export";
+import { localDateString } from "@/lib/utils";
 import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
 import { PrintableSheet } from "@/components/printable-sheet";
 import { FeeTypeSettingsDialog } from "./fee-type-settings-dialog";
@@ -237,7 +238,7 @@ function StudentFeeDetailDialog({ id, onClose }: { id: number; onClose: () => vo
   const detail = useQuery({ queryKey: ["student-fee", id], queryFn: () => fetchStudentFee(id) });
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("cash");
-  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+  const [paidAt, setPaidAt] = useState(localDateString());
   const [note, setNote] = useState("");
   const [receiptPaymentId, setReceiptPaymentId] = useState<number | null>(null);
 
@@ -565,7 +566,7 @@ function useQuickSetStatus() {
   return useMutation({
     mutationFn: async ({ fee, newStatus }: { fee: StudentFeeDto; newStatus: FeeStatus }) => {
       if (newStatus === fee.status) return;
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateString();
 
       if (newStatus === "PAID") {
         if (fee.remaining > 0) {

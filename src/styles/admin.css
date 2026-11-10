@@ -84,7 +84,7 @@
 .donut-chart-sm .donut-center strong { font-size: 16px; }
 .donut-legend-sm { width: 100%; gap: 5px; }
 .donut-legend-sm li { font-size: 11px; }
-.activity-list { margin: 0; padding: 10px 14px 14px; list-style: none; display: grid; gap: 4px; max-height: 320px; overflow-y: auto; }
+.activity-list { margin: 0; padding: 10px 14px 14px; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; max-height: 320px; overflow-y: auto; }
 .activity-list li { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--border); }
 .activity-list li:last-child { border-bottom: 0; }
 .activity-list li > div { flex: 1; min-width: 0; }
@@ -174,7 +174,7 @@
 .print-sheet tfoot td { font-weight: 700; background: #f7f9f8; }
 .print-sheet td.num, .print-sheet th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-scroll { overflow-x: auto; }
-table { width: 100%; min-width: 600px; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; }
 tr { border-bottom: 1px solid var(--border); }
 tbody tr:last-child { border-bottom: 0; }
 th { height: 38px; padding: 0 17px; color: var(--foreground); font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-align: left; background: color-mix(in oklab, var(--sidebar) 6%, var(--panel)); border-bottom: 2px solid var(--border); }
@@ -230,7 +230,10 @@ select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
 .search-input input { border: 0; background: none; padding: 0; height: auto; color: var(--foreground); flex: 1; }
 .search-input input:focus { outline: none; box-shadow: none; }
 .exam-filters select { width: auto; flex: 0 0 180px; height: 36px; }
-.row-actions { display: flex; align-items: center; gap: 6px; }
+.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* Notice titles are free text and can run long — let them wrap instead of
+   forcing the table (and its ACTIONS column) past the half-width panel. */
+.notices-grid td:first-child { white-space: normal; }
 .status-dot { display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; vertical-align: middle; }
 .status-dot-green { background: var(--green); }
 .status-dot-amber { background: var(--orange); }

@@ -15,6 +15,7 @@ import { DateInput } from "@/components/ui/date-input";
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
 import { createExpense, fetchExpenses, voidExpense } from "@/lib/finance-api";
 import { ApiError } from "@/lib/api";
+import { localDateString } from "@/lib/utils";
 
 function money(n: number) {
   return `৳${n.toLocaleString("en-BD")}`;
@@ -25,7 +26,7 @@ function AddExpenseDialog() {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localDateString());
   const [note, setNote] = useState("");
 
   const mutation = useMutation({

@@ -16,6 +16,7 @@ import { createMultiStudentFee, recordStudentPayment } from "@/lib/finance-api";
 import { ApiError } from "@/lib/api";
 import type { StudentDto } from "@/lib/students-api";
 import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
+import { localDateString } from "@/lib/utils";
 
 // The fixed set of fees a student is commonly billed for. `feeTypeName` is
 // the canonical FeeType name stored in the DB (resolved/created on the fly
@@ -173,7 +174,7 @@ export function AddStudentFeeDialog({
         { created: [] as Array<{ id: number; name: string; amount: number }>, skipped: [] as string[] },
       );
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateString();
       if (status === "paid") {
         await Promise.all(
           created.map((c) =>
