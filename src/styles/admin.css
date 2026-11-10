@@ -186,6 +186,11 @@ td { height: 45px; padding: 0 17px; white-space: nowrap; color: var(--foreground
 .badge-amber { color: var(--amber-ink); background: color-mix(in oklab, var(--gold) 20%, var(--card)); border-color: transparent; }
 .badge-purple { color: var(--purple); background: color-mix(in oklab, var(--purple) 17%, var(--card)); border-color: transparent; }
 .badge-red { color: var(--red); background: color-mix(in oklab, var(--red) 16%, var(--card)); border-color: transparent; }
+
+.status-select { border-radius: 999px; font-weight: 600; border: 1px solid transparent; }
+.status-select-green { color: var(--green); background: color-mix(in oklab, var(--green) 14%, var(--card)); }
+.status-select-amber { color: var(--amber-ink); background: color-mix(in oklab, var(--gold) 20%, var(--card)); }
+.status-select-red { color: var(--red); background: color-mix(in oklab, var(--red) 16%, var(--card)); }
 .guardian-dot { display: inline-block; width: 6px; height: 6px; margin-right: 3px; border-radius: 50%; background: var(--blue); }.guardian-dot.mother { background: var(--pink); }
 .class-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; }
 .class-card { min-height: 87px; padding: 13px 16px; border-top: 4px solid; box-shadow: 0 1px 2px color-mix(in oklab, var(--foreground) 6%, transparent); }

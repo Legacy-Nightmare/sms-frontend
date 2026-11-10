@@ -24,10 +24,19 @@ import {
 } from "@/lib/teachers-api";
 import { fetchAllClassSubjects, type ClassSubjectDto } from "@/lib/exams-api";
 
-function TeacherAvatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
+function TeacherAvatar({
+  name,
+  photoUrl,
+  size = "sm",
+}: {
+  name: string;
+  photoUrl: string | null;
+  size?: "sm" | "lg";
+}) {
+  const sizeClass = size === "lg" ? " student-avatar-lg" : "";
   const url = teacherPhotoUrl(photoUrl);
   if (url) {
-    return <img className="student-avatar" src={url} alt="" />;
+    return <img className={`student-avatar${sizeClass}`} src={url} alt="" />;
   }
   const initials = name
     .split(" ")
@@ -35,7 +44,42 @@ function TeacherAvatar({ name, photoUrl }: { name: string; photoUrl: string | nu
     .slice(0, 2)
     .join("")
     .toUpperCase();
-  return <span className="student-avatar-placeholder">{initials || "?"}</span>;
+  return <span className={`student-avatar-placeholder${sizeClass}`}>{initials || "?"}</span>;
+}
+
+// Mirrors StudentAvatarCell (students-page.tsx) — click-to-view with no
+// photo-picker side effect, since photo management lives in the Edit
+// dialog. No photo on file means nothing to view, so no hover affordance.
+function TeacherAvatarCell({ teacher }: { teacher: TeacherDto }) {
+  const [viewOpen, setViewOpen] = useState(false);
+  const url = teacherPhotoUrl(teacher.photoUrl);
+
+  if (!url) {
+    return <TeacherAvatar name={teacher.name} photoUrl={null} />;
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        className="photo-upload-cell"
+        onClick={() => setViewOpen(true)}
+        title="View image"
+      >
+        <TeacherAvatar name={teacher.name} photoUrl={teacher.photoUrl} size="lg" />
+        <span className="photo-upload-overlay">View image</span>
+      </button>
+      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
+        <DialogContent style={{ maxWidth: 420 }}>
+          <img
+            src={url}
+            alt={teacher.name}
+            style={{ width: "100%", borderRadius: 12, display: "block" }}
+          />
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 function ConfirmDeleteDialog({
@@ -469,7 +513,7 @@ function GeneralTab() {
         {filteredTeachers.map((t) => (
           <tr key={t.id}>
             <td>
-              <TeacherAvatar name={t.name} photoUrl={t.photoUrl} />
+              <TeacherAvatarCell teacher={t} />
             </td>
             <td>{t.name}</td>
             <td className="mono muted-cell">{t.salary != null ? `৳${t.salary.toLocaleString("en-BD")}` : "—"}</td>

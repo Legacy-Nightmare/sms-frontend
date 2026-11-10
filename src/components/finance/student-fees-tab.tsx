@@ -617,6 +617,7 @@ function StatusSelect({
       value={fee.status}
       onClick={(e) => e.stopPropagation()}
       onChange={(e) => onChange(fee, e.target.value as FeeStatus)}
+      className={`status-select status-select-${statusTone[fee.status]}`}
       style={{ height: 30, fontSize: 12, padding: "0 8px" }}
     >
       <option value="PAID">Paid</option>
