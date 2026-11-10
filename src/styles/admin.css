@@ -187,7 +187,11 @@ td { height: 45px; padding: 0 17px; white-space: nowrap; color: var(--foreground
 .badge-purple { color: var(--purple); background: color-mix(in oklab, var(--purple) 17%, var(--card)); border-color: transparent; }
 .badge-red { color: var(--red); background: color-mix(in oklab, var(--red) 16%, var(--card)); border-color: transparent; }
 
-.status-select { border-radius: 999px; font-weight: 600; border: 1px solid transparent; }
+/* A compact colored pill, not a bordered field next to text inputs — the
+   custom chevron added to `select` below needs far more clearance than
+   this pill's own 8px padding gives it, so it overlapped the label text
+   ("Paid" render as "Palc"). Keep the browser's own tiny native arrow here. */
+.status-select { border-radius: 999px; font-weight: 600; border: 1px solid transparent; appearance: auto; -webkit-appearance: auto; -moz-appearance: auto; background-image: none; }
 .status-select-green { color: var(--green); background: color-mix(in oklab, var(--green) 14%, var(--card)); }
 .status-select-amber { color: var(--amber-ink); background: color-mix(in oklab, var(--gold) 20%, var(--card)); }
 .status-select-red { color: var(--red); background: color-mix(in oklab, var(--red) 16%, var(--card)); }
@@ -213,10 +217,21 @@ label { display: flex; flex-direction: column; gap: 7px; color: var(--muted-fore
 input, select, textarea { width: 100%; border: 1px solid var(--input); border-radius: 7px; outline: none; background: transparent; color: var(--foreground); padding: 0 13px; }
 input, select { height: 35px; } textarea { min-height: 68px; padding-top: 10px; resize: vertical; }
 input::placeholder, textarea::placeholder { color: oklch(0.62 0.02 262); } input:focus, select:focus, textarea:focus { border-color: var(--gold); }
-/* color-scheme alone doesn't reliably theme the native <option> popup in
-   every browser — setting background explicitly on both select and option
-   covers the popup too, not just the closed control. */
-select { color-scheme: light; background: var(--card); }
+/* Native <select> chrome (background, shadow, arrow) doesn't follow the
+   border/background rules above like <input> does, so it rendered as a
+   mismatched white box next to the other fields. appearance: none + a
+   drawn-on chevron makes it match exactly; color-scheme/option background
+   still themes the native popup list, which appearance: none can't reach. */
+select {
+  color-scheme: light;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238a93a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  padding-right: 34px;
+}
 select option { background: var(--card); color: var(--foreground); }
 select:disabled, input:disabled { opacity: .6; cursor: not-allowed; }
 .password-field { position: relative; }
