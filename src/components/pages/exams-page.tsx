@@ -367,7 +367,16 @@ function MarksEntryGrid({
     queryFn: () =>
       fetchMarksSheet(examId, subjectId as number, sectionId === "" ? undefined : sectionId),
     enabled: subjectId !== "",
+    retry: false,
   });
+
+  // A teacher who isn't assigned to the selected subject gets a 403 here —
+  // without this, the grid just silently stayed empty with no feedback.
+  useEffect(() => {
+    if (sheet.error) {
+      toast.error(sheet.error instanceof ApiError ? sheet.error.message : "Couldn't load marks sheet");
+    }
+  }, [sheet.error]);
 
   const selectedSubject = subjects.data?.find((s) => s.id === subjectId);
 
@@ -527,6 +536,11 @@ function MarksEntryGrid({
           widths=".5fr 1.6fr 1fr 1fr"
         >
           {sheet.isLoading && <EmptyRow colSpan={4}>Loading…</EmptyRow>}
+          {sheet.isError && (
+            <EmptyRow colSpan={4}>
+              {sheet.error instanceof ApiError ? sheet.error.message : "Couldn't load marks sheet"}
+            </EmptyRow>
+          )}
           {sheet.data?.length === 0 && (
             <EmptyRow colSpan={4}>No students in this class/section</EmptyRow>
           )}

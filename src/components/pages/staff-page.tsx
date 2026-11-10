@@ -19,6 +19,7 @@ import {
   type StaffDto,
   type StaffRole,
 } from "@/lib/staff-api";
+import { fetchTeachers } from "@/lib/teachers-api";
 import { ApiError } from "@/lib/api";
 
 const avatarTones = ["0", "1", "2"];
@@ -39,9 +40,19 @@ function AddStaffDialog() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<StaffRole>("teacher");
+  const [teacherId, setTeacherId] = useState("");
+
+  const teachers = useQuery({ queryKey: ["teachers"], queryFn: fetchTeachers, enabled: open });
 
   const mutation = useMutation({
-    mutationFn: () => createStaff({ name, email, password, role }),
+    mutationFn: () =>
+      createStaff({
+        name,
+        email,
+        password,
+        role,
+        teacherId: role === "teacher" && teacherId ? parseInt(teacherId, 10) : undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       toast.success(`${name} added as ${role}`);
@@ -50,6 +61,7 @@ function AddStaffDialog() {
       setEmail("");
       setPassword("");
       setRole("teacher");
+      setTeacherId("");
     },
     onError: (error) =>
       toast.error(error instanceof ApiError ? error.message : "Couldn't add staff account"),
@@ -111,6 +123,23 @@ function AddStaffDialog() {
               </select>
             </label>
           </div>
+          {role === "teacher" && (
+            <label>
+              Linked teacher <span className="muted-cell">(optional)</span>
+              <select value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+                <option value="">Not linked yet</option>
+                {teachers.data?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <p className="muted-cell" style={{ fontSize: 12, margin: "4px 0 0" }}>
+                Determines which classes/subjects this login can enter marks for. Leave unset
+                until the roster entry exists, then link it from Edit.
+              </p>
+            </label>
+          )}
           <div className="drawer-actions">
             <DialogClose asChild>
               <Button type="button" variant="outline">
@@ -131,9 +160,17 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<StaffRole>(staff.role);
+  const [teacherId, setTeacherId] = useState(staff.teacherId != null ? String(staff.teacherId) : "");
+
+  const teachers = useQuery({ queryKey: ["teachers"], queryFn: fetchTeachers, enabled: open });
 
   const mutation = useMutation({
-    mutationFn: () => updateStaffRole(staff.id, role),
+    mutationFn: () =>
+      updateStaffRole(
+        staff.id,
+        role,
+        role === "teacher" ? (teacherId ? parseInt(teacherId, 10) : null) : undefined,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
       toast.success(`${staff.name}'s role updated to ${role}`);
@@ -148,7 +185,10 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setRole(staff.role);
+        if (next) {
+          setRole(staff.role);
+          setTeacherId(staff.teacherId != null ? String(staff.teacherId) : "");
+        }
       }}
     >
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
@@ -177,6 +217,19 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
               <option value="admin">Admin</option>
             </select>
           </label>
+          {role === "teacher" && (
+            <label>
+              Linked teacher <span className="muted-cell">(optional)</span>
+              <select value={teacherId} onChange={(e) => setTeacherId(e.target.value)}>
+                <option value="">Not linked</option>
+                {teachers.data?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="drawer-actions">
             <DialogClose asChild>
               <Button type="button" variant="outline">
@@ -200,7 +253,7 @@ export function StaffPage() {
     <>
       <PageHeading
         title="Staff accounts"
-        subtitle="Admins have full access · teachers can enter marks and post notices · finance officers manage fees, salary, and expenses"
+        subtitle="Admins have full access · teachers can enter marks for their own assigned classes/subjects · finance officers manage fees, salary, and expenses"
         action={<AddStaffDialog />}
       />
       <Panel>

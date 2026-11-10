@@ -144,6 +144,12 @@
 @media print {
   body * { visibility: hidden; }
   .print-area, .print-area * { visibility: visible; }
+  /* Pulls a print-area out of normal page flow so it prints at the top of
+     the page instead of leaving blank space where the (still visibility:
+     hidden but still laid-out) rest of the page used to be. Covers a plain
+     in-page print-area; .print-dialog below additionally resets a Dialog's
+     own fixed-position/centering chrome for the same purpose. */
+  .print-area { position: absolute; top: 0; left: 0; width: 100%; }
   .print-dialog {
     position: static !important;
     transform: none !important;
@@ -155,6 +161,18 @@
     padding: 0 !important;
   }
 }
+.print-only { display: none; }
+@media print {
+  .print-only { display: block; }
+}
+.print-sheet { padding: 24px; color: #111; font-family: var(--font-sans, sans-serif); }
+.print-sheet h1 { margin: 0 0 2px; font-size: 20px; }
+.print-sheet .print-sheet-subtitle { margin: 0 0 18px; font-size: 12px; color: #555; }
+.print-sheet table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.print-sheet th, .print-sheet td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+.print-sheet th { background: #eef4f2; font-weight: 700; }
+.print-sheet tfoot td { font-weight: 700; background: #f7f9f8; }
+.print-sheet td.num, .print-sheet th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .table-scroll { overflow-x: auto; }
 table { width: 100%; min-width: 600px; border-collapse: collapse; }
 tr { border-bottom: 1px solid var(--border); }

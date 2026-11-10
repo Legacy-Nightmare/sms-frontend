@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge, DataTable, EmptyRow, PageHeading, Panel } from "@/components/dashboard-ui";
+import { useAuth } from "@/lib/auth";
 import { fetchClasses } from "@/lib/academics-api";
 import {
   createNotice,
@@ -165,6 +166,8 @@ function DeleteNoticeDialog({
 }
 
 export function NoticesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const queryClient = useQueryClient();
   const notices = useQuery({ queryKey: ["notices"], queryFn: fetchNotices });
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
@@ -249,89 +252,97 @@ export function NoticesPage() {
                   </div>
                 </td>
                 <td className="row-actions">
-                  {!notice.publishedAt && (
-                    <Button
-                      size="sm"
-                      disabled={publishMutation.isPending}
-                      onClick={() => publishMutation.mutate(notice.id)}
-                    >
-                      Publish
-                    </Button>
+                  {isAdmin ? (
+                    <>
+                      {!notice.publishedAt && (
+                        <Button
+                          size="sm"
+                          disabled={publishMutation.isPending}
+                          onClick={() => publishMutation.mutate(notice.id)}
+                        >
+                          Publish
+                        </Button>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title={notice.publishedToWebsiteAt ? "Remove from website" : "Publish to website"}
+                        disabled={toggleWebsiteMutation.isPending}
+                        onClick={() => toggleWebsiteMutation.mutate(notice)}
+                      >
+                        <Globe size={16} color={notice.publishedToWebsiteAt ? "var(--teal)" : undefined} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Edit notice"
+                        onClick={() => setEditingNotice(notice)}
+                      >
+                        <Pencil size={16} />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Delete notice"
+                        onClick={() => setDeletingNotice(notice)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </>
+                  ) : (
+                    <span className="muted-cell">—</span>
                   )}
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    title={notice.publishedToWebsiteAt ? "Remove from website" : "Publish to website"}
-                    disabled={toggleWebsiteMutation.isPending}
-                    onClick={() => toggleWebsiteMutation.mutate(notice)}
-                  >
-                    <Globe size={16} color={notice.publishedToWebsiteAt ? "var(--teal)" : undefined} />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    title="Edit notice"
-                    onClick={() => setEditingNotice(notice)}
-                  >
-                    <Pencil size={16} />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    title="Delete notice"
-                    onClick={() => setDeletingNotice(notice)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
                 </td>
               </tr>
             ))}
           </DataTable>
         </Panel>
-        <Panel className="notice-form">
-          <div className="panel-title">
-            <h2>New notice</h2>
-          </div>
-          <form
-            onSubmit={(event: FormEvent) => {
-              event.preventDefault();
-              createMutation.mutate();
-            }}
-          >
-            <label>
-              Title
-              <input
-                required
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Winter break schedule"
-              />
-            </label>
-            <label>
-              Audience
-              <select value={classId} onChange={(e) => setClassId(e.target.value)}>
-                <option value="">All classes</option>
-                {classes.data?.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Message
-              <textarea
-                required
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                placeholder="The school will remain closed for winter break from 20 December to 2 January. Classes resume 3 January."
-              />
-            </label>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Saving…" : "Save as draft"}
-            </Button>
-          </form>
-        </Panel>
+        {isAdmin && (
+          <Panel className="notice-form">
+            <div className="panel-title">
+              <h2>New notice</h2>
+            </div>
+            <form
+              onSubmit={(event: FormEvent) => {
+                event.preventDefault();
+                createMutation.mutate();
+              }}
+            >
+              <label>
+                Title
+                <input
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Winter break schedule"
+                />
+              </label>
+              <label>
+                Audience
+                <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+                  <option value="">All classes</option>
+                  {classes.data?.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Message
+                <textarea
+                  required
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="The school will remain closed for winter break from 20 December to 2 January. Classes resume 3 January."
+                />
+              </label>
+              <Button type="submit" disabled={createMutation.isPending}>
+                {createMutation.isPending ? "Saving…" : "Save as draft"}
+              </Button>
+            </form>
+          </Panel>
+        )}
       </div>
 
       <EditNoticeDialog

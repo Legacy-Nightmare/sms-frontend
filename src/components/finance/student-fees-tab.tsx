@@ -1,7 +1,7 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Download, Pencil, Plus, Printer, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,7 +29,9 @@ import {
   type StudentFeeDto,
 } from "@/lib/finance-api";
 import { ApiError } from "@/lib/api";
+import { exportStyledExcel } from "@/lib/excel-export";
 import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
+import { PrintableSheet } from "@/components/printable-sheet";
 import { FeeTypeSettingsDialog } from "./fee-type-settings-dialog";
 import { ReceiptDialog } from "./receipt-dialog";
 import { AddStudentFeeDialog } from "./add-student-fee-dialog";
@@ -806,8 +808,74 @@ function AllBilledFeesView() {
       }),
   });
 
+  const feeRows = fees.data?.rows ?? [];
+  const exportColumns = [
+    { header: "Student", key: "student" },
+    { header: "Class", key: "class" },
+    { header: "Fee type", key: "feeType" },
+    { header: "Period", key: "period" },
+    { header: "Due", key: "due", type: "currency" as const },
+    { header: "Remaining", key: "remaining", type: "currency" as const },
+    { header: "Status", key: "status" },
+  ];
+  const exportRows = feeRows.map((f) => ({
+    student: `${f.studentName} (${f.studentCode})`,
+    class: f.className,
+    feeType: f.feeTypeName,
+    period: f.periodMonth ? `${f.periodMonth}/${f.periodYear}` : "—",
+    due: f.amountDue,
+    remaining: f.remaining,
+    status: f.status,
+  }));
+  const exportTotals = {
+    student: "Total",
+    class: "",
+    feeType: "",
+    period: "",
+    due: feeRows.reduce((s, f) => s + f.amountDue, 0),
+    remaining: feeRows.reduce((s, f) => s + f.remaining, 0),
+    status: "",
+  };
+  const filterLabel = [
+    classId !== "" ? classes.data?.find((c) => c.id === classId)?.name : "All classes",
+    status || "All statuses",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const handleExport = () => {
+    exportStyledExcel({
+      filename: "student-fees",
+      sheetName: "Student Fees",
+      title: "Agradoot Preparatory and High School — Student Fees",
+      subtitle: `${filterLabel} · Generated ${new Date().toLocaleString("en-BD")}`,
+      columns: exportColumns,
+      rows: exportRows,
+      totals: exportTotals,
+    });
+  };
+
   return (
     <>
+      <PrintableSheet
+        title="Agradoot Preparatory and High School — Student Fees"
+        subtitle={`${filterLabel} · Printed ${new Date().toLocaleString("en-BD")}`}
+        columns={[
+          { header: "Student", key: "student" },
+          { header: "Class", key: "class" },
+          { header: "Fee type", key: "feeType" },
+          { header: "Period", key: "period" },
+          { header: "Due", key: "due", numeric: true },
+          { header: "Remaining", key: "remaining", numeric: true },
+          { header: "Status", key: "status" },
+        ]}
+        rows={exportRows.map((r) => ({ ...r, due: money(r.due), remaining: money(r.remaining) }))}
+        totals={{
+          ...exportTotals,
+          due: money(exportTotals.due),
+          remaining: money(exportTotals.remaining),
+        }}
+      />
       <Panel>
         <div
           style={{
@@ -842,6 +910,19 @@ function AllBilledFeesView() {
             </select>
           </label>
           <div style={{ flex: 1 }} />
+          <Button size="sm" variant="outline" onClick={handleExport} disabled={feeRows.length === 0}>
+            <Download size={14} />
+            Export Excel
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.print()}
+            disabled={feeRows.length === 0}
+          >
+            <Printer size={14} />
+            Print
+          </Button>
           <FeeTypeSettingsDialog />
           <BillFeeDialog />
         </div>

@@ -46,7 +46,12 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
+  // Only a 401 on a request that WAS carrying a token means the session
+  // itself went bad — force a logout with that message. A 401 with no
+  // token (e.g. a failed login attempt) is just a plain auth failure and
+  // should fall through to show the backend's own message instead
+  // ("Invalid email or password"), not a misleading "session expired".
+  if (res.status === 401 && token) {
     clearToken();
     unauthorizedHandler?.();
     throw new ApiError(401, "Your session expired. Sign in again.");

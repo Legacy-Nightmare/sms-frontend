@@ -7,6 +7,7 @@ export interface StaffDto {
   name: string;
   email: string;
   role: StaffRole;
+  teacherId: number | null;
   createdAt: string;
 }
 
@@ -19,12 +20,13 @@ export function createStaff(input: {
   email: string;
   password: string;
   role: StaffRole;
+  teacherId?: number | undefined;
 }) {
   return apiPost<StaffDto>("/users", input);
 }
 
-export function updateStaffRole(id: number, role: StaffRole) {
-  return apiPut<StaffDto>(`/users/${id}`, { role });
+export function updateStaffRole(id: number, role: StaffRole, teacherId?: number | null | undefined) {
+  return apiPut<StaffDto>(`/users/${id}`, { role, teacherId });
 }
 
 export function deleteStaff(id: number) {

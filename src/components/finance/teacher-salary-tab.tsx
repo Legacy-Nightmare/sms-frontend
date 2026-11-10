@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  Download,
   Plus,
+  Printer,
   Search,
   Wallet,
 } from "lucide-react";
@@ -20,7 +22,9 @@ import {
 } from "@/components/ui/dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { Badge, Panel } from "@/components/dashboard-ui";
+import { PrintableSheet } from "@/components/printable-sheet";
 import { ApiError } from "@/lib/api";
+import { exportStyledExcel } from "@/lib/excel-export";
 import { fetchTeachers, type TeacherDto } from "@/lib/teachers-api";
 import { fetchSubjectCatalog } from "@/lib/subjects-catalog-api";
 import { fetchClasses } from "@/lib/academics-api";
@@ -428,8 +432,74 @@ export function TeacherSalaryTab() {
     });
   }, [rows, search, statusFilter, subjectFilter, classFilter, assignmentsByTeacher]);
 
+  const periodLabel = `${MONTH_NAMES[periodMonth - 1]} ${periodYear}`;
+  const exportColumns = [
+    { header: "Teacher", key: "teacher" },
+    { header: "Subject", key: "subject" },
+    { header: "Period", key: "period" },
+    { header: "Due", key: "due", type: "currency" as const },
+    { header: "Paid", key: "paid", type: "currency" as const },
+    { header: "Remaining", key: "remaining", type: "currency" as const },
+    { header: "Status", key: "status" },
+  ];
+  const exportRows = filteredRows.map((r) => ({
+    teacher: r.teacherName,
+    subject: r.teacherSubject ?? "—",
+    period: `${r.periodMonth}/${r.periodYear}`,
+    due: r.amountDue,
+    paid: r.paid,
+    remaining: r.remaining,
+    status: statusLabel[r.status],
+  }));
+  const exportTotals = {
+    teacher: "Total",
+    subject: "",
+    period: "",
+    due: totals.totalSalary,
+    paid: totals.totalPaid,
+    remaining: totals.remaining,
+    status: "",
+  };
+
+  const handleExport = () => {
+    exportStyledExcel({
+      filename: `teacher-salary-${periodYear}-${String(periodMonth).padStart(2, "0")}`,
+      sheetName: "Teacher Salary",
+      title: "Agradoot Preparatory and High School — Teacher Salary",
+      subtitle: `Period: ${periodLabel} · Generated ${new Date().toLocaleString("en-BD")}`,
+      columns: exportColumns,
+      rows: exportRows,
+      totals: exportTotals,
+    });
+  };
+
   return (
     <>
+      <PrintableSheet
+        title="Agradoot Preparatory and High School — Teacher Salary"
+        subtitle={`Period: ${periodLabel} · Printed ${new Date().toLocaleString("en-BD")}`}
+        columns={[
+          { header: "Teacher", key: "teacher" },
+          { header: "Subject", key: "subject" },
+          { header: "Period", key: "period" },
+          { header: "Due", key: "due", numeric: true },
+          { header: "Paid", key: "paid", numeric: true },
+          { header: "Remaining", key: "remaining", numeric: true },
+          { header: "Status", key: "status" },
+        ]}
+        rows={exportRows.map((r) => ({
+          ...r,
+          due: money(r.due),
+          paid: money(r.paid),
+          remaining: money(r.remaining),
+        }))}
+        totals={{
+          ...exportTotals,
+          due: money(exportTotals.due),
+          paid: money(exportTotals.paid),
+          remaining: money(exportTotals.remaining),
+        }}
+      />
       <div className="panel-title" style={{ marginBottom: 14 }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <select value={periodMonth} onChange={(e) => setPeriodMonth(Number(e.target.value))}>
@@ -446,7 +516,17 @@ export function TeacherSalaryTab() {
             style={{ width: 90 }}
           />
         </div>
-        <GenerateSalaryDialog periodMonth={periodMonth} periodYear={periodYear} />
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button size="sm" variant="outline" onClick={handleExport} disabled={exportRows.length === 0}>
+            <Download size={14} />
+            Export Excel
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => window.print()} disabled={exportRows.length === 0}>
+            <Printer size={14} />
+            Print
+          </Button>
+          <GenerateSalaryDialog periodMonth={periodMonth} periodYear={periodYear} />
+        </div>
       </div>
 
       <div className="stat-grid">
