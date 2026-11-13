@@ -37,6 +37,7 @@ export interface StudentFeeDto {
   studentId: number;
   studentName: string;
   studentCode: string;
+  roll: number;
   classId: number;
   className: string;
   sectionId: number;
