@@ -15,6 +15,7 @@ import { PasswordInput } from "@/components/password-input";
 import {
   createStaff,
   fetchStaff,
+  setStaffActive,
   updateStaffRole,
   type StaffDto,
   type StaffRole,
@@ -161,23 +162,28 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<StaffRole>(staff.role);
   const [teacherId, setTeacherId] = useState(staff.teacherId != null ? String(staff.teacherId) : "");
+  const [isActive, setIsActive] = useState(staff.isActive);
 
   const teachers = useQuery({ queryKey: ["teachers"], queryFn: fetchTeachers, enabled: open });
 
   const mutation = useMutation({
-    mutationFn: () =>
-      updateStaffRole(
+    mutationFn: async () => {
+      await updateStaffRole(
         staff.id,
         role,
         role === "teacher" ? (teacherId ? parseInt(teacherId, 10) : null) : undefined,
-      ),
+      );
+      if (isActive !== staff.isActive) {
+        await setStaffActive(staff.id, isActive);
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["staff"] });
-      toast.success(`${staff.name}'s role updated to ${role}`);
+      toast.success(`${staff.name}'s account updated`);
       setOpen(false);
     },
     onError: (error) =>
-      toast.error(error instanceof ApiError ? error.message : "Couldn't update role"),
+      toast.error(error instanceof ApiError ? error.message : "Couldn't update account"),
   });
 
   return (
@@ -188,6 +194,7 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
         if (next) {
           setRole(staff.role);
           setTeacherId(staff.teacherId != null ? String(staff.teacherId) : "");
+          setIsActive(staff.isActive);
         }
       }}
     >
@@ -230,6 +237,20 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
               </select>
             </label>
           )}
+          <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <input
+              type="checkbox"
+              style={{ width: "auto" }}
+              checked={isActive}
+              onChange={(e) => setIsActive(e.target.checked)}
+            />
+            Active (can sign in)
+          </label>
+          {!isActive && (
+            <p className="muted-cell" style={{ fontSize: 12, margin: "-8px 0 0" }}>
+              Deactivated — this login will be rejected at sign-in until reactivated.
+            </p>
+          )}
           <div className="drawer-actions">
             <DialogClose asChild>
               <Button type="button" variant="outline">
@@ -237,7 +258,7 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
               </Button>
             </DialogClose>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving…" : "Save role"}
+              {mutation.isPending ? "Saving…" : "Save"}
             </Button>
           </div>
         </form>
@@ -257,8 +278,8 @@ export function StaffPage() {
         action={<AddStaffDialog />}
       />
       <Panel>
-        <DataTable headers={["NAME", "EMAIL", "ROLE", ""]} widths="1.1fr 1.65fr .65fr .45fr">
-          {staff.isLoading && <EmptyRow colSpan={4}>Loading…</EmptyRow>}
+        <DataTable headers={["NAME", "EMAIL", "ROLE", "STATUS", ""]} widths="1.1fr 1.5fr .6fr .6fr .45fr">
+          {staff.isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
           {staff.data?.map((member, i) => (
             <tr key={member.id}>
               <td>
@@ -283,6 +304,11 @@ export function StaffPage() {
                     : member.role === "finance"
                       ? "Finance Officer"
                       : "Teacher"}
+                </Badge>
+              </td>
+              <td>
+                <Badge tone={member.isActive ? "green" : "red"}>
+                  {member.isActive ? "Active" : "Inactive"}
                 </Badge>
               </td>
               <td>

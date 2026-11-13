@@ -8,6 +8,7 @@ export interface StaffDto {
   email: string;
   role: StaffRole;
   teacherId: number | null;
+  isActive: boolean;
   createdAt: string;
 }
 
@@ -27,6 +28,10 @@ export function createStaff(input: {
 
 export function updateStaffRole(id: number, role: StaffRole, teacherId?: number | null | undefined) {
   return apiPut<StaffDto>(`/users/${id}`, { role, teacherId });
+}
+
+export function setStaffActive(id: number, isActive: boolean) {
+  return apiPut<StaffDto>(`/users/${id}/active`, { isActive });
 }
 
 export function deleteStaff(id: number) {
