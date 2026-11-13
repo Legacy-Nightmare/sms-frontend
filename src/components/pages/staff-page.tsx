@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { Badge, DataTable, EmptyRow, PageHeading, Panel } from "@/components/das
 import { PasswordInput } from "@/components/password-input";
 import {
   createStaff,
+  deleteStaff,
   fetchStaff,
   setStaffActive,
   updateStaffRole,
@@ -22,6 +23,28 @@ import {
 } from "@/lib/staff-api";
 import { fetchTeachers } from "@/lib/teachers-api";
 import { ApiError } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+
+function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (staff: StaffDto) => {
+      const ok = window.confirm(
+        `Delete ${staff.name}'s account (${staff.email})? This cannot be undone.`,
+      );
+      if (!ok) throw new Error("cancelled");
+      return deleteStaff(staff.id);
+    },
+    onSuccess: (_data, staff) => {
+      queryClient.invalidateQueries({ queryKey: ["staff"] });
+      toast.success(`${staff.name}'s account deleted`);
+    },
+    onError: (error) => {
+      if (error instanceof Error && error.message === "cancelled") return;
+      toast.error(error instanceof ApiError ? error.message : "Couldn't delete account");
+    },
+  });
+}
 
 const avatarTones = ["0", "1", "2"];
 
@@ -268,7 +291,9 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
 }
 
 export function StaffPage() {
+  const { user } = useAuth();
   const staff = useQuery({ queryKey: ["staff"], queryFn: fetchStaff });
+  const deleteStaffMutation = useDeleteStaff();
 
   return (
     <>
@@ -278,7 +303,7 @@ export function StaffPage() {
         action={<AddStaffDialog />}
       />
       <Panel>
-        <DataTable headers={["NAME", "EMAIL", "ROLE", "STATUS", ""]} widths="1.1fr 1.5fr .6fr .6fr .45fr">
+        <DataTable headers={["NAME", "EMAIL", "ROLE", "STATUS", ""]} widths="1.1fr 1.4fr .6fr .6fr .7fr">
           {staff.isLoading && <EmptyRow colSpan={5}>Loading…</EmptyRow>}
           {staff.data?.map((member, i) => (
             <tr key={member.id}>
@@ -311,8 +336,17 @@ export function StaffPage() {
                   {member.isActive ? "Active" : "Inactive"}
                 </Badge>
               </td>
-              <td>
+              <td className="row-actions">
                 <EditStaffDialog staff={member} />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={member.id === user?.id}
+                  title={member.id === user?.id ? "You can't delete your own account" : "Delete"}
+                  onClick={() => deleteStaffMutation.mutate(member)}
+                >
+                  <Trash2 size={14} />
+                </Button>
               </td>
             </tr>
           ))}
