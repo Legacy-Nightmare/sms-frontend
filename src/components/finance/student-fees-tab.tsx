@@ -301,7 +301,7 @@ function StudentFeeDetailDialog({ id, onClose }: { id: number; onClose: () => vo
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent>
+      <DialogContent style={{ maxWidth: 680 }}>
         <DialogHeader>
           <DialogTitle>
             {detail.data?.studentName} — {detail.data?.feeTypeName}
