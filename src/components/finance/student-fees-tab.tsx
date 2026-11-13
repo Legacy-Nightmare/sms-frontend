@@ -580,12 +580,13 @@ function useDeleteStudentFee() {
 // Status isn't a stored column — it's derived from payments — so "setting"
 // it here means performing the underlying payment action: PAID pays off
 // whatever remains, UNPAID voids every active payment (reverting to zero
-// paid), and PARTIAL prompts for how much of the remaining amount to record
-// as paid now. Picking the fee's current status is a no-op.
+// paid). PARTIAL needs an amount from the user, so that case is handled by
+// PartialPaymentDialog instead of this hook. Picking the fee's current
+// status is a no-op.
 function useQuickSetStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ fee, newStatus }: { fee: StudentFeeDto; newStatus: FeeStatus }) => {
+    mutationFn: async ({ fee, newStatus }: { fee: StudentFeeDto; newStatus: "PAID" | "UNPAID" }) => {
       if (newStatus === fee.status) return;
       const today = localDateString();
 
@@ -593,21 +594,13 @@ function useQuickSetStatus() {
         if (fee.remaining > 0) {
           await recordStudentPayment(fee.id, { amount: fee.remaining, method: "cash", paidAt: today });
         }
-      } else if (newStatus === "UNPAID") {
+      } else {
         const detail = await fetchStudentFee(fee.id);
         await Promise.all(
           detail.payments
             .filter((p) => p.status === "active")
             .map((p) => voidStudentPayment(p.id, "Reset to unpaid")),
         );
-      } else {
-        const input = window.prompt(`Amount received now (of ৳${fee.remaining} remaining)?`);
-        if (!input) throw new Error("cancelled");
-        const amount = parseInt(input, 10);
-        if (!amount || amount <= 0 || amount >= fee.remaining) {
-          throw new Error("Enter an amount less than the remaining due");
-        }
-        await recordStudentPayment(fee.id, { amount, method: "cash", paidAt: today });
       }
     },
     onSuccess: () => {
@@ -615,16 +608,77 @@ function useQuickSetStatus() {
       toast.success("Status updated");
     },
     onError: (error) => {
-      if (error instanceof Error && error.message === "cancelled") return;
-      toast.error(
-        error instanceof ApiError
-          ? error.message
-          : error instanceof Error
-            ? error.message
-            : "Couldn't update status",
-      );
+      toast.error(error instanceof ApiError ? error.message : "Couldn't update status");
     },
   });
+}
+
+// Replaces a native window.prompt() for "how much came in now" — same
+// validation (must be a positive amount less than what's remaining, since
+// a full payment should go through the PAID status instead).
+function PartialPaymentDialog({ fee, onClose }: { fee: StudentFeeDto; onClose: () => void }) {
+  const queryClient = useQueryClient();
+  const [amount, setAmount] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      recordStudentPayment(fee.id, {
+        amount: parseInt(amount, 10),
+        method: "cash",
+        paidAt: localDateString(),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student-fees"] });
+      toast.success("Payment recorded");
+      onClose();
+    },
+    onError: (error) =>
+      toast.error(error instanceof ApiError ? error.message : "Couldn't record payment"),
+  });
+
+  return (
+    <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            Partial payment — {fee.studentName} <span className="muted-cell mono">({fee.feeTypeName})</span>
+          </DialogTitle>
+        </DialogHeader>
+        <form
+          className="student-form"
+          onSubmit={(e: FormEvent) => {
+            e.preventDefault();
+            mutation.mutate();
+          }}
+        >
+          <label>
+            Amount received now (৳){" "}
+            <span className="muted-cell">(of {money(fee.remaining)} remaining)</span>
+            <input
+              required
+              autoFocus
+              type="number"
+              min={1}
+              max={Math.max(fee.remaining - 1, 1)}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder={`Less than ${fee.remaining}`}
+            />
+          </label>
+          <div className="drawer-actions">
+            <DialogClose asChild>
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </DialogClose>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Recording…" : "Record payment"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function StatusSelect({
@@ -688,6 +742,7 @@ export function StudentFeesTab() {
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editingFee, setEditingFee] = useState<StudentFeeDto | null>(null);
+  const [partialPayFee, setPartialPayFee] = useState<StudentFeeDto | null>(null);
   const [receipt, setReceipt] = useState<{
     payment: PaymentDto;
     fee: StudentFeeDto;
@@ -696,6 +751,14 @@ export function StudentFeesTab() {
 
   const deleteFee = useDeleteStudentFee();
   const setFeeStatus = useQuickSetStatus();
+
+  const handleStatusChange = (fee: StudentFeeDto, newStatus: FeeStatus) => {
+    if (newStatus === "PARTIAL") {
+      if (newStatus !== fee.status) setPartialPayFee(fee);
+      return;
+    }
+    setFeeStatus.mutate({ fee, newStatus });
+  };
 
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
   const feeTypes = useQuery({ queryKey: ["fee-types"], queryFn: fetchFeeTypes });
@@ -1026,7 +1089,7 @@ export function StudentFeesTab() {
               <td className="mono">{money(f.paid)}</td>
               <td className="mono strong">{money(f.remaining)}</td>
               <td onClick={(e) => e.stopPropagation()}>
-                <StatusSelect fee={f} onChange={(fee, newStatus) => setFeeStatus.mutate({ fee, newStatus })} />
+                <StatusSelect fee={f} onChange={handleStatusChange} />
               </td>
               <td className="row-actions" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
@@ -1099,6 +1162,9 @@ export function StudentFeesTab() {
 
       {selectedId && <StudentFeeDetailDialog id={selectedId} onClose={() => setSelectedId(null)} />}
       {editingFee && <EditStudentFeeDialog fee={editingFee} onClose={() => setEditingFee(null)} />}
+      {partialPayFee && (
+        <PartialPaymentDialog fee={partialPayFee} onClose={() => setPartialPayFee(null)} />
+      )}
       {receipt && (
         <ReceiptDialog
           payment={receipt.payment}
