@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
@@ -11,11 +12,20 @@ export function ReceiptDialog({
   payment,
   fee,
   onClose,
+  autoPrint = false,
 }: {
   payment: PaymentDto;
   fee: StudentFeeDto;
   onClose: () => void;
+  autoPrint?: boolean;
 }) {
+  // "Print Receipt" row actions jump straight to the system print dialog
+  // instead of making the user open this dialog and click Print themselves.
+  useEffect(() => {
+    if (autoPrint) window.print();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="print-dialog" style={{ maxWidth: 480 }}>

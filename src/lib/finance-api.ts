@@ -39,6 +39,8 @@ export interface StudentFeeDto {
   studentCode: string;
   classId: number;
   className: string;
+  sectionId: number;
+  sectionName: string;
   feeTypeId: number;
   feeTypeName: string;
   amountDue: number;
@@ -49,6 +51,12 @@ export interface StudentFeeDto {
   periodYear: number | null;
   note: string | null;
   createdAt: string;
+}
+
+export interface StudentFeeSummaryDto {
+  totalBilled: number;
+  collected: number;
+  outstanding: number;
 }
 
 export interface TeacherSalaryDto {
@@ -121,14 +129,20 @@ export const upsertClassFee = (input: { classId: number; feeTypeId: number; amou
 export function fetchStudentFees(filters: {
   studentId?: number | undefined;
   classId?: number | undefined;
+  sectionId?: number | undefined;
   feeTypeId?: number | undefined;
   status?: FeeStatus | undefined;
+  search?: string | undefined;
+  from?: string | undefined;
+  to?: string | undefined;
   page?: number | undefined;
   pageSize?: number | undefined;
 }) {
   const qs = new URLSearchParams();
-  Object.entries(filters).forEach(([k, v]) => v !== undefined && qs.set(k, String(v)));
-  return apiGet<{ rows: StudentFeeDto[]; total: number }>(`/finance/student-fees?${qs.toString()}`);
+  Object.entries(filters).forEach(([k, v]) => v !== undefined && v !== "" && qs.set(k, String(v)));
+  return apiGet<{ rows: StudentFeeDto[]; total: number; summary: StudentFeeSummaryDto }>(
+    `/finance/student-fees?${qs.toString()}`,
+  );
 }
 
 export const fetchStudentFee = (id: number) =>

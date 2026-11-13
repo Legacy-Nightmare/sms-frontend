@@ -1,7 +1,21 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Download, Pencil, Plus, Printer, Search, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Eye,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Printer,
+  Search,
+  Trash2,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,10 +24,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
 import { DateInput } from "@/components/ui/date-input";
 import { fetchClasses } from "@/lib/academics-api";
-import { fetchStudents, type StudentDto } from "@/lib/students-api";
+import { fetchStudents } from "@/lib/students-api";
 import {
   bulkApplyStudentFee,
   createStudentFee,
@@ -25,6 +46,7 @@ import {
   updateStudentFee,
   voidStudentPayment,
   type FeeStatus,
+  type PaymentDto,
   type PaymentMethod,
   type StudentFeeDto,
 } from "@/lib/finance-api";
@@ -35,7 +57,6 @@ import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
 import { PrintableSheet } from "@/components/printable-sheet";
 import { FeeTypeSettingsDialog } from "./fee-type-settings-dialog";
 import { ReceiptDialog } from "./receipt-dialog";
-import { AddStudentFeeDialog } from "./add-student-fee-dialog";
 
 function money(n: number) {
   return `৳${n.toLocaleString("en-BD")}`;
@@ -628,222 +649,154 @@ function StatusSelect({
   );
 }
 
-// All fees billed for one student (across every fee type/period), with a
-// row-click into the same payment/receipt dialog used by the "All billed
-// fees" view below.
-function StudentFeesListDialog({ student, onClose }: { student: StudentDto; onClose: () => void }) {
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [editingFee, setEditingFee] = useState<StudentFeeDto | null>(null);
-  const deleteFee = useDeleteStudentFee();
-  const setStatus = useQuickSetStatus();
-  const fees = useQuery({
-    queryKey: ["student-fees", "by-student", student.id],
-    queryFn: () => fetchStudentFees({ studentId: student.id, pageSize: 200 }),
-  });
-
-  return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent style={{ maxWidth: 820 }}>
-        <DialogHeader>
-          <DialogTitle>
-            Fees — {student.name} <span className="muted-cell mono">({student.code})</span>
-          </DialogTitle>
-        </DialogHeader>
-        <DataTable
-          headers={["FEE TYPE", "PERIOD", "DUE", "REMAINING", "STATUS", "ACTIONS"]}
-          widths="1.2fr .8fr .9fr .9fr .8fr 1fr"
-        >
-          {fees.isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
-          {fees.data?.rows.length === 0 && <EmptyRow colSpan={6}>No fees billed yet</EmptyRow>}
-          {fees.data?.rows.map((f) => (
-            <tr key={f.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(f.id)}>
-              <td>{f.feeTypeName}</td>
-              <td className="mono muted-cell">
-                {f.periodMonth ? `${f.periodMonth}/${f.periodYear}` : "—"}
-              </td>
-              <td className="mono">{money(f.amountDue)}</td>
-              <td className="mono strong">{money(f.remaining)}</td>
-              <td onClick={(e) => e.stopPropagation()}>
-                <StatusSelect fee={f} onChange={(fee, newStatus) => setStatus.mutate({ fee, newStatus })} />
-              </td>
-              <td style={{ display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                <Button size="sm" variant="outline" onClick={() => setEditingFee(f)}>
-                  <Pencil size={13} />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => deleteFee.mutate(f)}>
-                  <Trash2 size={13} />
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </DialogContent>
-      {selectedId && <StudentFeeDetailDialog id={selectedId} onClose={() => setSelectedId(null)} />}
-      {editingFee && <EditStudentFeeDialog fee={editingFee} onClose={() => setEditingFee(null)} />}
-    </Dialog>
-  );
+function startOfMonthStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-// Default view: every student, filterable by class/section/search, each with
-// an "Add fee" action that bills the fixed set of fee fields in one go.
-function StudentsView() {
-  const [search, setSearch] = useState("");
-  const [classId, setClassId] = useState<number | "">("");
-  const [sectionId, setSectionId] = useState<number | "">("");
-  const [feeStudent, setFeeStudent] = useState<StudentDto | null>(null);
-  const [viewingStudent, setViewingStudent] = useState<StudentDto | null>(null);
-
-  const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
-  const students = useQuery({ queryKey: ["students"], queryFn: () => fetchStudents() });
-
-  const availableSections = useMemo(() => {
-    if (!classes.data) return [];
-    if (classId === "") return classes.data.flatMap((c) => c.sections);
-    return classes.data.find((c) => c.id === classId)?.sections ?? [];
-  }, [classes.data, classId]);
-
-  const filteredStudents = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return (students.data ?? []).filter((s) => {
-      if (query && !s.name.toLowerCase().includes(query) && !s.code.toLowerCase().includes(query)) {
-        return false;
-      }
-      if (classId !== "" && s.classId !== classId) return false;
-      if (sectionId !== "" && s.sectionId !== sectionId) return false;
-      return true;
-    });
-  }, [students.data, search, classId, sectionId]);
-
-  return (
-    <>
-      <Panel>
-        <div className="exam-filters">
-          <div className="search-input">
-            <Search size={15} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or code…"
-            />
-          </div>
-          <select
-            value={classId}
-            onChange={(e) => {
-              setClassId(e.target.value ? parseInt(e.target.value, 10) : "");
-              setSectionId("");
-            }}
-          >
-            <option value="">All classes</option>
-            {classes.data?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sectionId}
-            onChange={(e) => setSectionId(e.target.value ? parseInt(e.target.value, 10) : "")}
-          >
-            <option value="">All sections</option>
-            {availableSections.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <DataTable
-          headers={["STUDENT", "CLASS", "SECTION", "ROLL", "ACTIONS"]}
-          widths="1.6fr 1fr 1fr .6fr 1.4fr"
-        >
-          {students.isLoading && <EmptyRow colSpan={5}>Loading students…</EmptyRow>}
-          {!students.isLoading && filteredStudents.length === 0 && (
-            <EmptyRow colSpan={5}>No students match your filters.</EmptyRow>
-          )}
-          {filteredStudents.map((s) => (
-            <tr key={s.id}>
-              <td>
-                {s.name} <span className="muted-cell mono">({s.code})</span>
-              </td>
-              <td>{s.classEntity.name}</td>
-              <td>{s.section.name}</td>
-              <td className="mono">{s.roll}</td>
-              <td style={{ display: "flex", gap: 6 }}>
-                <Button size="sm" onClick={() => setFeeStudent(s)}>
-                  Add fee
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setViewingStudent(s)}>
-                  View fees
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      </Panel>
-
-      {feeStudent && <AddStudentFeeDialog student={feeStudent} onClose={() => setFeeStudent(null)} />}
-      {viewingStudent && (
-        <StudentFeesListDialog student={viewingStudent} onClose={() => setViewingStudent(null)} />
-      )}
-    </>
-  );
+interface FeeFilters {
+  classId: number | "";
+  sectionId: number | "";
+  feeTypeId: number | "";
+  status: FeeStatus | "";
+  from: string;
+  to: string;
+  search: string;
 }
 
-// All billed fees across every student, filterable by class/status — the
-// original view, kept for bulk-billing a whole class and for an overview of
-// everything billed regardless of which student it's for.
-function AllBilledFeesView() {
-  const [classId, setClassId] = useState<number | "">("");
-  const [status, setStatus] = useState<FeeStatus | "">("");
+function defaultFilters(): FeeFilters {
+  return {
+    classId: "",
+    sectionId: "",
+    feeTypeId: "",
+    status: "",
+    from: startOfMonthStr(),
+    to: localDateString(),
+    search: "",
+  };
+}
+
+const PAGE_SIZE = 20;
+
+// Unified view: every billed student fee in one table (replaces the old
+// "Students" / "All billed fees" toggle), with a summary that reflects
+// whatever filters are currently applied. Billing a fee for a student who
+// has none yet still goes through "Bill a fee" below — there's no need for
+// a separate student-browsing tab just to reach that.
+export function StudentFeesTab() {
+  const [draft, setDraft] = useState<FeeFilters>(defaultFilters);
+  const [applied, setApplied] = useState<FeeFilters>(defaultFilters);
+  const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editingFee, setEditingFee] = useState<StudentFeeDto | null>(null);
+  const [receipt, setReceipt] = useState<{
+    payment: PaymentDto;
+    fee: StudentFeeDto;
+    autoPrint: boolean;
+  } | null>(null);
+
   const deleteFee = useDeleteStudentFee();
   const setFeeStatus = useQuickSetStatus();
 
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
+  const feeTypes = useQuery({ queryKey: ["fee-types"], queryFn: fetchFeeTypes });
+
+  const availableSections = useMemo(() => {
+    if (!classes.data) return [];
+    if (draft.classId === "") return classes.data.flatMap((c) => c.sections);
+    return classes.data.find((c) => c.id === draft.classId)?.sections ?? [];
+  }, [classes.data, draft.classId]);
+
   const fees = useQuery({
-    queryKey: ["student-fees", classId, status],
+    queryKey: ["student-fees", applied, page],
     queryFn: () =>
       fetchStudentFees({
-        classId: classId === "" ? undefined : classId,
-        status: status === "" ? undefined : status,
+        classId: applied.classId === "" ? undefined : applied.classId,
+        sectionId: applied.sectionId === "" ? undefined : applied.sectionId,
+        feeTypeId: applied.feeTypeId === "" ? undefined : applied.feeTypeId,
+        status: applied.status === "" ? undefined : applied.status,
+        search: applied.search.trim() || undefined,
+        from: applied.from || undefined,
+        to: applied.to || undefined,
+        page,
+        pageSize: PAGE_SIZE,
       }),
   });
 
   const feeRows = fees.data?.rows ?? [];
+  const total = fees.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const summary = fees.data?.summary ?? { totalBilled: 0, collected: 0, outstanding: 0 };
+
+  const applyFilters = () => {
+    setApplied(draft);
+    setPage(1);
+  };
+  const resetFilters = () => {
+    const fresh = defaultFilters();
+    setDraft(fresh);
+    setApplied(fresh);
+    setPage(1);
+  };
+
+  // Row actions need the fee's payments, which the list row doesn't carry —
+  // fetched on demand rather than per-row on every render.
+  const openReceipt = async (row: StudentFeeDto, autoPrint: boolean) => {
+    if (row.paid <= 0) {
+      toast.error("No payments recorded against this fee yet");
+      return;
+    }
+    try {
+      const detail = await fetchStudentFee(row.id);
+      const latest = detail.payments.find((p) => p.status === "active");
+      if (!latest) {
+        toast.error("No active payment found for this fee");
+        return;
+      }
+      setReceipt({ payment: latest, fee: detail, autoPrint });
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't load the receipt");
+    }
+  };
+
   const exportColumns = [
     { header: "Student", key: "student" },
-    { header: "Class", key: "class" },
+    { header: "Class / Section", key: "classSection" },
     { header: "Fee type", key: "feeType" },
     { header: "Period", key: "period" },
-    { header: "Due", key: "due", type: "currency" as const },
+    { header: "Billed", key: "billed", type: "currency" as const },
+    { header: "Paid", key: "paid", type: "currency" as const },
     { header: "Remaining", key: "remaining", type: "currency" as const },
     { header: "Status", key: "status" },
   ];
   const exportRows = feeRows.map((f) => ({
     student: `${f.studentName} (${f.studentCode})`,
-    class: f.className,
+    classSection: `${f.className} · ${f.sectionName}`,
     feeType: f.feeTypeName,
     period: f.periodMonth ? `${f.periodMonth}/${f.periodYear}` : "—",
-    due: f.amountDue,
+    billed: f.amountDue,
+    paid: f.paid,
     remaining: f.remaining,
     status: f.status,
   }));
   const exportTotals = {
     student: "Total",
-    class: "",
+    classSection: "",
     feeType: "",
     period: "",
-    due: feeRows.reduce((s, f) => s + f.amountDue, 0),
-    remaining: feeRows.reduce((s, f) => s + f.remaining, 0),
+    billed: summary.totalBilled,
+    paid: summary.collected,
+    remaining: summary.outstanding,
     status: "",
   };
-  const filterLabel = [
-    classId !== "" ? classes.data?.find((c) => c.id === classId)?.name : "All classes",
-    status || "All statuses",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const filterLabel =
+    [
+      draft.classId !== "" ? classes.data?.find((c) => c.id === applied.classId)?.name : null,
+      applied.status || null,
+      `${applied.from} – ${applied.to}`,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "All student fees";
 
   const handleExport = () => {
     exportStyledExcel({
@@ -857,6 +810,9 @@ function AllBilledFeesView() {
     });
   };
 
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
+
   return (
     <>
       <PrintableSheet
@@ -864,54 +820,169 @@ function AllBilledFeesView() {
         subtitle={`${filterLabel} · Printed ${new Date().toLocaleString("en-BD")}`}
         columns={[
           { header: "Student", key: "student" },
-          { header: "Class", key: "class" },
+          { header: "Class / Section", key: "classSection" },
           { header: "Fee type", key: "feeType" },
           { header: "Period", key: "period" },
-          { header: "Due", key: "due", numeric: true },
+          { header: "Billed", key: "billed", numeric: true },
+          { header: "Paid", key: "paid", numeric: true },
           { header: "Remaining", key: "remaining", numeric: true },
           { header: "Status", key: "status" },
         ]}
-        rows={exportRows.map((r) => ({ ...r, due: money(r.due), remaining: money(r.remaining) }))}
+        rows={exportRows.map((r) => ({
+          ...r,
+          billed: money(r.billed),
+          paid: money(r.paid),
+          remaining: money(r.remaining),
+        }))}
         totals={{
           ...exportTotals,
-          due: money(exportTotals.due),
+          billed: money(exportTotals.billed),
+          paid: money(exportTotals.paid),
           remaining: money(exportTotals.remaining),
         }}
       />
+
+      <div className="finance-stat-grid">
+        <Panel className="stat stat-blue">
+          <div className="stat-top">
+            <span className="stat-icon stat-icon-blue">
+              <Wallet />
+            </span>
+          </div>
+          <strong>{money(summary.totalBilled)}</strong>
+          <span>Total Billed</span>
+        </Panel>
+        <Panel className="stat stat-green">
+          <div className="stat-top">
+            <span className="stat-icon stat-icon-green">
+              <CheckCircle2 />
+            </span>
+          </div>
+          <strong>{money(summary.collected)}</strong>
+          <span>Collected</span>
+        </Panel>
+        <Panel className="stat stat-pink">
+          <div className="stat-top">
+            <span className="stat-icon stat-icon-pink">
+              <AlertCircle />
+            </span>
+          </div>
+          <strong>{money(summary.outstanding)}</strong>
+          <span>Outstanding</span>
+        </Panel>
+      </div>
+
       <Panel>
-        <div
-          style={{
-            padding: 16,
-            display: "flex",
-            gap: 12,
-            alignItems: "flex-end",
-            flexWrap: "wrap",
-          }}
-        >
-          <label style={{ minWidth: 160 }}>
-            Class
-            <select
-              value={classId}
-              onChange={(e) => setClassId(e.target.value ? parseInt(e.target.value, 10) : "")}
-            >
-              <option value="">All classes</option>
-              {classes.data?.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label style={{ minWidth: 160 }}>
-            Status
-            <select value={status} onChange={(e) => setStatus(e.target.value as FeeStatus | "")}>
-              <option value="">All statuses</option>
-              <option value="UNPAID">Unpaid</option>
-              <option value="PARTIAL">Partial</option>
-              <option value="PAID">Paid</option>
-            </select>
-          </label>
-          <div style={{ flex: 1 }} />
+        <div style={{ padding: 16, display: "grid", gap: 14 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 12,
+            }}
+          >
+            <label>
+              Fee Type
+              <select
+                value={draft.feeTypeId}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    feeTypeId: e.target.value ? parseInt(e.target.value, 10) : "",
+                  }))
+                }
+              >
+                <option value="">All Fee Types</option>
+                {feeTypes.data?.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Payment Status
+              <select
+                value={draft.status}
+                onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as FeeStatus | "" }))}
+              >
+                <option value="">All Statuses</option>
+                <option value="UNPAID">Unpaid</option>
+                <option value="PARTIAL">Partial</option>
+                <option value="PAID">Paid</option>
+              </select>
+            </label>
+            <label>
+              Class
+              <select
+                value={draft.classId}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    classId: e.target.value ? parseInt(e.target.value, 10) : "",
+                    sectionId: "",
+                  }))
+                }
+              >
+                <option value="">All Classes</option>
+                {classes.data?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Section
+              <select
+                value={draft.sectionId}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    sectionId: e.target.value ? parseInt(e.target.value, 10) : "",
+                  }))
+                }
+              >
+                <option value="">All Sections</option>
+                {availableSections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="two-fields">
+              <label>
+                From
+                <DateInput value={draft.from} onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value }))} />
+              </label>
+              <label>
+                To
+                <DateInput value={draft.to} onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))} />
+              </label>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <div className="search-input" style={{ flex: 1, minWidth: 220 }}>
+              <Search size={15} />
+              <input
+                value={draft.search}
+                onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
+                placeholder="Search by student name or ID…"
+              />
+            </div>
+            <Button type="button" variant="ghost" onClick={resetFilters}>
+              Reset Filters
+            </Button>
+            <Button type="button" onClick={applyFilters}>
+              Apply Filters
+            </Button>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel>
+        <div style={{ padding: 16, display: "flex", justifyContent: "flex-end", gap: 8, flexWrap: "wrap" }}>
           <Button size="sm" variant="outline" onClick={handleExport} disabled={feeRows.length === 0}>
             <Download size={14} />
             Export Excel
@@ -928,71 +999,124 @@ function AllBilledFeesView() {
           <FeeTypeSettingsDialog />
           <BillFeeDialog />
         </div>
-      </Panel>
-
-      <Panel>
         <DataTable
-          headers={["STUDENT", "CLASS", "FEE TYPE", "PERIOD", "DUE", "REMAINING", "STATUS", "ACTIONS"]}
-          widths="1.3fr .7fr 1fr .8fr .9fr .9fr .8fr .9fr"
+          headers={[
+            "STUDENT",
+            "CLASS / SECTION",
+            "FEE TYPE",
+            "PERIOD",
+            "BILLED",
+            "PAID",
+            "REMAINING",
+            "STATUS",
+            "ACTIONS",
+          ]}
+          widths="1.4fr 1fr .9fr .7fr .8fr .8fr .8fr .8fr .6fr"
         >
-          {fees.isLoading && <EmptyRow colSpan={8}>Loading…</EmptyRow>}
-          {fees.data?.rows.length === 0 && <EmptyRow colSpan={8}>No fees billed yet</EmptyRow>}
-          {fees.data?.rows.map((f) => (
+          {fees.isLoading && <EmptyRow colSpan={9}>Loading…</EmptyRow>}
+          {!fees.isLoading && feeRows.length === 0 && (
+            <EmptyRow colSpan={9}>No fees match your filters.</EmptyRow>
+          )}
+          {feeRows.map((f) => (
             <tr key={f.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(f.id)}>
               <td>
-                {f.studentName} <span className="muted-cell mono">({f.studentCode})</span>
+                <div style={{ fontWeight: 600 }}>{f.studentName}</div>
+                <div className="muted-cell mono" style={{ fontSize: 11 }}>
+                  ID: {f.studentCode}
+                </div>
               </td>
-              <td>{f.className}</td>
+              <td>
+                {f.className} · {f.sectionName}
+              </td>
               <td>{f.feeTypeName}</td>
               <td className="mono muted-cell">
                 {f.periodMonth ? `${f.periodMonth}/${f.periodYear}` : "—"}
               </td>
               <td className="mono">{money(f.amountDue)}</td>
+              <td className="mono">{money(f.paid)}</td>
               <td className="mono strong">{money(f.remaining)}</td>
               <td onClick={(e) => e.stopPropagation()}>
                 <StatusSelect fee={f} onChange={(fee, newStatus) => setFeeStatus.mutate({ fee, newStatus })} />
               </td>
-              <td style={{ display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                <Button size="sm" variant="outline" onClick={() => setEditingFee(f)}>
-                  <Pencil size={13} />
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => deleteFee.mutate(f)}>
-                  <Trash2 size={13} />
-                </Button>
+              <td className="row-actions" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="ghost" aria-label="More actions">
+                      <MoreHorizontal size={16} />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setSelectedId(f.id)}>
+                      <Eye size={14} />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={f.paid <= 0} onClick={() => openReceipt(f, false)}>
+                      <Download size={14} />
+                      Download Receipt
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={f.paid <= 0} onClick={() => openReceipt(f, true)}>
+                      <Printer size={14} />
+                      Print Receipt
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled={f.remaining <= 0} onClick={() => setSelectedId(f.id)}>
+                      <Wallet size={14} />
+                      Record Payment
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setEditingFee(f)}>
+                      <Pencil size={14} />
+                      Edit Fee Bill
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="danger-item" onClick={() => deleteFee.mutate(f)}>
+                      <Trash2 size={14} />
+                      Delete Fee Bill
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </td>
             </tr>
           ))}
         </DataTable>
+        <div className="results-footer">
+          <span className="muted-cell" style={{ fontSize: 13 }}>
+            {total === 0
+              ? "No records"
+              : `Showing ${rangeStart}–${rangeEnd} of ${total} records`}
+          </span>
+          <div>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              <ChevronLeft size={14} />
+            </Button>
+            <span className="mono" style={{ fontSize: 13 }}>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              <ChevronRight size={14} />
+            </Button>
+          </div>
+        </div>
       </Panel>
 
       {selectedId && <StudentFeeDetailDialog id={selectedId} onClose={() => setSelectedId(null)} />}
       {editingFee && <EditStudentFeeDialog fee={editingFee} onClose={() => setEditingFee(null)} />}
-    </>
-  );
-}
-
-export function StudentFeesTab() {
-  const [view, setView] = useState<"students" | "billed">("students");
-
-  return (
-    <>
-      <div className="mode-toggle" style={{ width: 320, marginBottom: 16 }}>
-        <button
-          type="button"
-          className={view === "students" ? "active" : ""}
-          onClick={() => setView("students")}
-        >
-          Students
-        </button>
-        <button
-          type="button"
-          className={view === "billed" ? "active" : ""}
-          onClick={() => setView("billed")}
-        >
-          All billed fees
-        </button>
-      </div>
-      {view === "students" ? <StudentsView /> : <AllBilledFeesView />}
+      {receipt && (
+        <ReceiptDialog
+          payment={receipt.payment}
+          fee={receipt.fee}
+          autoPrint={receipt.autoPrint}
+          onClose={() => setReceipt(null)}
+        />
+      )}
     </>
   );
 }

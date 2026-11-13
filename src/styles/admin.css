@@ -173,7 +173,13 @@
 .print-sheet th { background: #eef4f2; font-weight: 700; }
 .print-sheet tfoot td { font-weight: 700; background: #f7f9f8; }
 .print-sheet td.num, .print-sheet th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.table-scroll { overflow-x: auto; }
+/* min-width: 0 is the actual fix for the grid-blowout bug described further
+   down near [role="dialog"] — this is the one place deep enough inside
+   nested grids (dialog > form grid > plain div > table-scroll) that the
+   shallow role="dialog" fix alone doesn't reach every level. Setting it
+   here, on the thing that's actually supposed to scroll, works regardless
+   of how many grid ancestors sit above it. */
+.table-scroll { overflow-x: auto; min-width: 0; }
 table { width: 100%; border-collapse: collapse; }
 tr { border-bottom: 1px solid var(--border); }
 tbody tr:last-child { border-bottom: 0; }
@@ -284,6 +290,18 @@ input[type="file"]::file-selector-button:hover, input[type="file"]::-webkit-file
 .status-dot-amber { background: var(--orange); }
 .danger-item { color: var(--red); }
 .danger-item:hover, .danger-item:focus { color: var(--red); background: color-mix(in oklab, var(--red) 12%, transparent); }
+/* Radix's Dialog.Content is `display: grid`, and so are several of our own
+   form wrappers nested inside it (student-form, two-fields, the plain grid
+   div in StudentFeeDetailDialog). A grid item's automatic minimum width
+   defaults to its content's min-content size unless the item ITSELF has
+   non-visible overflow — giving only the outermost level min-width: 0
+   (role="dialog" > *) isn't enough, because the wide table is usually two
+   or three plain <div>s deeper, inside a SECOND nested grid, and each of
+   those intermediate divs is itself a grid item with the same problem.
+   Resetting every div inside a dialog, not just the first level, is what
+   actually stops it blowing through the dialog's edge at every depth. */
+[role="dialog"] > * { min-width: 0; }
+[role="dialog"] div { min-width: 0; }
 .results-footer { min-height: 59px; padding: 12px 17px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .results-footer > div { display: flex; align-items: center; gap: 12px; }
 .notice-form form { display: grid; gap: 13px; padding: 16px; }.notice-form form button { width: 100%; }
