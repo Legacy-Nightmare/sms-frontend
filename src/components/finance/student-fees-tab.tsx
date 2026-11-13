@@ -684,8 +684,7 @@ const PAGE_SIZE = 20;
 // has none yet still goes through "Bill a fee" below — there's no need for
 // a separate student-browsing tab just to reach that.
 export function StudentFeesTab() {
-  const [draft, setDraft] = useState<FeeFilters>(defaultFilters);
-  const [applied, setApplied] = useState<FeeFilters>(defaultFilters);
+  const [filters, setFilters] = useState<FeeFilters>(defaultFilters);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [editingFee, setEditingFee] = useState<StudentFeeDto | null>(null);
@@ -703,21 +702,21 @@ export function StudentFeesTab() {
 
   const availableSections = useMemo(() => {
     if (!classes.data) return [];
-    if (draft.classId === "") return classes.data.flatMap((c) => c.sections);
-    return classes.data.find((c) => c.id === draft.classId)?.sections ?? [];
-  }, [classes.data, draft.classId]);
+    if (filters.classId === "") return classes.data.flatMap((c) => c.sections);
+    return classes.data.find((c) => c.id === filters.classId)?.sections ?? [];
+  }, [classes.data, filters.classId]);
 
   const fees = useQuery({
-    queryKey: ["student-fees", applied, page],
+    queryKey: ["student-fees", filters, page],
     queryFn: () =>
       fetchStudentFees({
-        classId: applied.classId === "" ? undefined : applied.classId,
-        sectionId: applied.sectionId === "" ? undefined : applied.sectionId,
-        feeTypeId: applied.feeTypeId === "" ? undefined : applied.feeTypeId,
-        status: applied.status === "" ? undefined : applied.status,
-        search: applied.search.trim() || undefined,
-        from: applied.from || undefined,
-        to: applied.to || undefined,
+        classId: filters.classId === "" ? undefined : filters.classId,
+        sectionId: filters.sectionId === "" ? undefined : filters.sectionId,
+        feeTypeId: filters.feeTypeId === "" ? undefined : filters.feeTypeId,
+        status: filters.status === "" ? undefined : filters.status,
+        search: filters.search.trim() || undefined,
+        from: filters.from || undefined,
+        to: filters.to || undefined,
         page,
         pageSize: PAGE_SIZE,
       }),
@@ -728,14 +727,15 @@ export function StudentFeesTab() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const summary = fees.data?.summary ?? { totalBilled: 0, collected: 0, outstanding: 0 };
 
-  const applyFilters = () => {
-    setApplied(draft);
+  // Every filter applies immediately on change — the patch merges into
+  // filters (which drives the query key above) and jumps back to page 1,
+  // since the old page number is almost never still valid for a new filter.
+  const updateFilters = (patch: Partial<FeeFilters>) => {
+    setFilters((f) => ({ ...f, ...patch }));
     setPage(1);
   };
   const resetFilters = () => {
-    const fresh = defaultFilters();
-    setDraft(fresh);
-    setApplied(fresh);
+    setFilters(defaultFilters());
     setPage(1);
   };
 
@@ -791,9 +791,9 @@ export function StudentFeesTab() {
   };
   const filterLabel =
     [
-      draft.classId !== "" ? classes.data?.find((c) => c.id === applied.classId)?.name : null,
-      applied.status || null,
-      `${applied.from} – ${applied.to}`,
+      filters.classId !== "" ? classes.data?.find((c) => c.id === filters.classId)?.name : null,
+      filters.status || null,
+      `${filters.from} – ${filters.to}`,
     ]
       .filter(Boolean)
       .join(" · ") || "All student fees";
@@ -884,12 +884,9 @@ export function StudentFeesTab() {
             <label>
               Fee Type
               <select
-                value={draft.feeTypeId}
+                value={filters.feeTypeId}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    feeTypeId: e.target.value ? parseInt(e.target.value, 10) : "",
-                  }))
+                  updateFilters({ feeTypeId: e.target.value ? parseInt(e.target.value, 10) : "" })
                 }
               >
                 <option value="">All Fee Types</option>
@@ -903,8 +900,8 @@ export function StudentFeesTab() {
             <label>
               Payment Status
               <select
-                value={draft.status}
-                onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value as FeeStatus | "" }))}
+                value={filters.status}
+                onChange={(e) => updateFilters({ status: e.target.value as FeeStatus | "" })}
               >
                 <option value="">All Statuses</option>
                 <option value="UNPAID">Unpaid</option>
@@ -915,13 +912,12 @@ export function StudentFeesTab() {
             <label>
               Class
               <select
-                value={draft.classId}
+                value={filters.classId}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
+                  updateFilters({
                     classId: e.target.value ? parseInt(e.target.value, 10) : "",
                     sectionId: "",
-                  }))
+                  })
                 }
               >
                 <option value="">All Classes</option>
@@ -935,12 +931,9 @@ export function StudentFeesTab() {
             <label>
               Section
               <select
-                value={draft.sectionId}
+                value={filters.sectionId}
                 onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    sectionId: e.target.value ? parseInt(e.target.value, 10) : "",
-                  }))
+                  updateFilters({ sectionId: e.target.value ? parseInt(e.target.value, 10) : "" })
                 }
               >
                 <option value="">All Sections</option>
@@ -954,11 +947,11 @@ export function StudentFeesTab() {
             <div className="two-fields">
               <label>
                 From
-                <DateInput value={draft.from} onChange={(e) => setDraft((d) => ({ ...d, from: e.target.value }))} />
+                <DateInput value={filters.from} onChange={(e) => updateFilters({ from: e.target.value })} />
               </label>
               <label>
                 To
-                <DateInput value={draft.to} onChange={(e) => setDraft((d) => ({ ...d, to: e.target.value }))} />
+                <DateInput value={filters.to} onChange={(e) => updateFilters({ to: e.target.value })} />
               </label>
             </div>
           </div>
@@ -966,16 +959,13 @@ export function StudentFeesTab() {
             <div className="search-input" style={{ flex: 1, minWidth: 220 }}>
               <Search size={15} />
               <input
-                value={draft.search}
-                onChange={(e) => setDraft((d) => ({ ...d, search: e.target.value }))}
+                value={filters.search}
+                onChange={(e) => updateFilters({ search: e.target.value })}
                 placeholder="Search by student name or ID…"
               />
             </div>
             <Button type="button" variant="ghost" onClick={resetFilters}>
               Reset Filters
-            </Button>
-            <Button type="button" onClick={applyFilters}>
-              Apply Filters
             </Button>
           </div>
         </div>
