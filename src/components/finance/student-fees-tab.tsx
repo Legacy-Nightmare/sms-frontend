@@ -55,6 +55,8 @@ import { exportStyledExcel } from "@/lib/excel-export";
 import { localDateString } from "@/lib/utils";
 import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
 import { PrintableSheet } from "@/components/printable-sheet";
+import { fetchSchoolProfile } from "@/lib/website-api";
+import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 import { FeeTypeSettingsDialog } from "./fee-type-settings-dialog";
 import { ReceiptDialog } from "./receipt-dialog";
 
@@ -804,7 +806,7 @@ export function StudentFeesTab() {
 
   // Row actions need the fee's payments, which the list row doesn't carry —
   // fetched on demand rather than per-row on every render.
-  const openReceipt = async (row: StudentFeeDto, autoPrint: boolean) => {
+  const openReceipt = async (row: StudentFeeDto) => {
     if (row.paid <= 0) {
       toast.error("No payments recorded against this fee yet");
       return;
@@ -816,9 +818,32 @@ export function StudentFeesTab() {
         toast.error("No active payment found for this fee");
         return;
       }
-      setReceipt({ payment: latest, fee: detail, autoPrint });
+      setReceipt({ payment: latest, fee: detail, autoPrint: true });
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't load the receipt");
+    }
+  };
+
+  // "Download" is a real file, not a dialog — fetch the same data the
+  // dialog would, and hand it straight to the PDF generator.
+  const downloadReceipt = async (row: StudentFeeDto) => {
+    if (row.paid <= 0) {
+      toast.error("No payments recorded against this fee yet");
+      return;
+    }
+    try {
+      const [detail, profile] = await Promise.all([
+        fetchStudentFee(row.id),
+        fetchSchoolProfile(),
+      ]);
+      const latest = detail.payments.find((p) => p.status === "active");
+      if (!latest) {
+        toast.error("No active payment found for this fee");
+        return;
+      }
+      downloadReceiptPdf(latest, detail, profile.phone);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't generate the receipt");
     }
   };
 
@@ -1103,11 +1128,11 @@ export function StudentFeesTab() {
                       <Eye size={14} />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled={f.paid <= 0} onClick={() => openReceipt(f, false)}>
+                    <DropdownMenuItem disabled={f.paid <= 0} onClick={() => downloadReceipt(f)}>
                       <Download size={14} />
                       Download Receipt
                     </DropdownMenuItem>
-                    <DropdownMenuItem disabled={f.paid <= 0} onClick={() => openReceipt(f, true)}>
+                    <DropdownMenuItem disabled={f.paid <= 0} onClick={() => openReceipt(f)}>
                       <Printer size={14} />
                       Print Receipt
                     </DropdownMenuItem>

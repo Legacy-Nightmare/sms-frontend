@@ -1,9 +1,11 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SCHOOL_NAME } from "@/lib/school-info";
 import { fetchSchoolProfile } from "@/lib/website-api";
+import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 import type { PaymentDto, StudentFeeDto } from "@/lib/finance-api";
 
 function money(n: number) {
@@ -148,9 +150,17 @@ export function ReceiptDialog({
           />
         </div>
 
-        <div className="drawer-actions">
+        <div className="drawer-actions" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
           <Button type="button" variant="outline" onClick={onClose}>
             Close
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => downloadReceiptPdf(payment, fee, profile.data?.phone)}
+          >
+            <Download size={14} />
+            Download PDF
           </Button>
           <Button type="button" onClick={() => window.print()}>
             Print
