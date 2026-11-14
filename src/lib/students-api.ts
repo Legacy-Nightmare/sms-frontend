@@ -103,6 +103,10 @@ export function fetchStudents(filters?: {
   return apiGet<StudentDto[]>(`/students${qs ? `?${qs}` : ""}`);
 }
 
+export function fetchStudent(id: number) {
+  return apiGet<StudentDto>(`/students/${id}`);
+}
+
 export function createStudent(input: CreateStudentInput) {
   return apiPost<StudentDto>("/students", input);
 }

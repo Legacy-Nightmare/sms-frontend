@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Download,
   Eye,
+  IdCard,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -34,7 +35,7 @@ import {
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
 import { DateInput } from "@/components/ui/date-input";
 import { fetchClasses } from "@/lib/academics-api";
-import { fetchStudents } from "@/lib/students-api";
+import { fetchStudent, fetchStudents, type StudentDto } from "@/lib/students-api";
 import {
   bulkApplyStudentFee,
   createStudentFee,
@@ -59,6 +60,7 @@ import { fetchSchoolProfile } from "@/lib/website-api";
 import { downloadReceiptPdf } from "@/lib/receipt-pdf";
 import { FeeTypeSettingsDialog } from "./fee-type-settings-dialog";
 import { ReceiptDialog } from "./receipt-dialog";
+import { AdmitCardDialog } from "./admit-card-dialog";
 
 function money(n: number) {
   return `৳${n.toLocaleString("en-BD")}`;
@@ -750,6 +752,9 @@ export function StudentFeesTab() {
     fee: StudentFeeDto;
     autoPrint: boolean;
   } | null>(null);
+  const [admitCard, setAdmitCard] = useState<{ fee: StudentFeeDto; student: StudentDto } | null>(
+    null,
+  );
 
   const deleteFee = useDeleteStudentFee();
   const setFeeStatus = useQuickSetStatus();
@@ -844,6 +849,18 @@ export function StudentFeesTab() {
       downloadReceiptPdf(latest, detail, profile.phone);
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't generate the receipt");
+    }
+  };
+
+  // Admit card is gated on the fee itself: Exam Fee type, fully paid. Shows
+  // a preview dialog first (the student's own PDF button downloads from
+  // there) rather than generating the file straight from the row action.
+  const openAdmitCard = async (row: StudentFeeDto) => {
+    try {
+      const student = await fetchStudent(row.studentId);
+      setAdmitCard({ fee: row, student });
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't load student details");
     }
   };
 
@@ -1140,6 +1157,15 @@ export function StudentFeesTab() {
                       <Wallet size={14} />
                       Record Payment
                     </DropdownMenuItem>
+                    {f.feeTypeName.trim().toLowerCase() === "exam fee" && (
+                      <DropdownMenuItem
+                        disabled={f.status !== "PAID"}
+                        onClick={() => openAdmitCard(f)}
+                      >
+                        <IdCard size={14} />
+                        Download Admit Card
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setEditingFee(f)}>
                       <Pencil size={14} />
@@ -1196,6 +1222,13 @@ export function StudentFeesTab() {
           fee={receipt.fee}
           autoPrint={receipt.autoPrint}
           onClose={() => setReceipt(null)}
+        />
+      )}
+      {admitCard && (
+        <AdmitCardDialog
+          fee={admitCard.fee}
+          student={admitCard.student}
+          onClose={() => setAdmitCard(null)}
         />
       )}
     </>

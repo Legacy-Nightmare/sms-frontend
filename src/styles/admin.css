@@ -163,6 +163,21 @@
   .receipt-cut-line span { background: #fff; }
 }
 
+/* Exam Fee admit card: same fillable-form fields as the receipt, plus a
+   photo box (top-right, like a real admit card) and signature lines
+   instead of a cut line. */
+.admit-card { position: relative; border: 1px solid var(--foreground); border-radius: 4px; padding: 16px 20px 20px; color: var(--foreground); }
+.admit-card-photo { position: absolute; top: 16px; right: 20px; width: 70px; height: 86px; border: 1px solid var(--muted-foreground); border-radius: 4px; display: grid; place-items: center; overflow: hidden; color: var(--muted-foreground); font-size: 11px; background: var(--panel); }
+.admit-card-photo img { width: 100%; height: 100%; object-fit: cover; }
+.admit-card-declaration { font-size: 12px; line-height: 1.5; margin: 16px 0 0; }
+.admit-card-signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 11px; text-align: center; }
+.admit-card-signature-line { width: 110px; border-top: 1px solid var(--foreground); margin-bottom: 6px; }
+@media print {
+  .admit-card { border-color: #000; }
+  .admit-card-photo { border-color: #000; }
+  .admit-card-signature-line { border-color: #000; }
+}
+
 /* Printable dialogs (marksheet, fee receipt): only .print-area renders,
    everything else — overlay, close button, Print/Close controls — is
    suppressed by the blanket visibility:hidden below. */
