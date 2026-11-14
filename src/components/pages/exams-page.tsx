@@ -71,6 +71,10 @@ function combineExamDate(day: string, month: string, year: string): string | und
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }
 
+// Academic year defaults to "now" — overridable, but a blank field was just
+// one more thing to fill in for the common case of creating this year's exam.
+const CURRENT_YEAR = String(new Date().getFullYear());
+
 function CreateExamDialog() {
   const queryClient = useQueryClient();
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
@@ -82,7 +86,7 @@ function CreateExamDialog() {
   const [day, setDay] = useState("");
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
-  const [academicYear, setAcademicYear] = useState("");
+  const [academicYear, setAcademicYear] = useState(CURRENT_YEAR);
 
   const sections = useQuery({
     queryKey: ["sections", classId],
@@ -111,7 +115,7 @@ function CreateExamDialog() {
       setDay("");
       setMonth("");
       setYear("");
-      setAcademicYear("");
+      setAcademicYear(CURRENT_YEAR);
     },
     onError: (error) =>
       toast.error(error instanceof ApiError ? error.message : "Couldn't create exam"),
@@ -280,7 +284,7 @@ function EditExamDialog({
       setDay(d);
       setMonth(m);
       setYear(y);
-      setAcademicYear(exam.academicYear ?? "");
+      setAcademicYear(exam.academicYear ?? CURRENT_YEAR);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam?.id]);
