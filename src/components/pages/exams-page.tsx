@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { DateInput } from "@/components/ui/date-input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +35,7 @@ import { AddSubjectDialog } from "@/components/add-subject-dialog";
 import { StudentAvatar } from "@/components/student-avatar";
 import { StudentMarksheetDialog } from "@/components/student-marksheet-dialog";
 import { fetchClasses, fetchSections } from "@/lib/academics-api";
+import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
 import {
   announceExamResults,
   createExam,
@@ -58,6 +58,19 @@ import {
 import { ApiError } from "@/lib/api";
 import { downloadCsv } from "@/lib/csv";
 
+// "YYYY-MM-DD" <-> separate day/month/year fields, so the month can be a
+// proper name dropdown instead of the native date picker's tiny spinner.
+function splitExamDate(date: string | null | undefined): { day: string; month: string; year: string } {
+  if (!date) return { day: "", month: "", year: "" };
+  const [year = "", month = "", day = ""] = date.split("-");
+  return { day: String(parseInt(day, 10)), month: String(parseInt(month, 10)), year };
+}
+
+function combineExamDate(day: string, month: string, year: string): string | undefined {
+  if (!day || !month || !year) return undefined;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
 function CreateExamDialog() {
   const queryClient = useQueryClient();
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
@@ -65,8 +78,17 @@ function CreateExamDialog() {
   const [name, setName] = useState("");
   const [type, setType] = useState<ExamType>("final");
   const [classId, setClassId] = useState("");
-  const [examDate, setExamDate] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
   const [academicYear, setAcademicYear] = useState("");
+
+  const sections = useQuery({
+    queryKey: ["sections", classId],
+    queryFn: () => fetchSections(parseInt(classId, 10)),
+    enabled: !!classId,
+  });
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -74,7 +96,8 @@ function CreateExamDialog() {
         name,
         type,
         classId: parseInt(classId, 10),
-        examDate: examDate || undefined,
+        sectionId: sectionId ? parseInt(sectionId, 10) : undefined,
+        examDate: combineExamDate(day, month, year),
         academicYear: academicYear || undefined,
       }),
     onSuccess: () => {
@@ -84,7 +107,10 @@ function CreateExamDialog() {
       setName("");
       setType("final");
       setClassId("");
-      setExamDate("");
+      setSectionId("");
+      setDay("");
+      setMonth("");
+      setYear("");
       setAcademicYear("");
     },
     onError: (error) =>
@@ -120,7 +146,14 @@ function CreateExamDialog() {
           <div className="two-fields">
             <label>
               Class
-              <select required value={classId} onChange={(e) => setClassId(e.target.value)}>
+              <select
+                required
+                value={classId}
+                onChange={(e) => {
+                  setClassId(e.target.value);
+                  setSectionId("");
+                }}
+              >
                 <option value="" disabled>
                   Select class
                 </option>
@@ -132,10 +165,46 @@ function CreateExamDialog() {
               </select>
             </label>
             <label>
-              Date
-              <DateInput value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+              Section
+              <select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
+                <option value="">All</option>
+                {sections.data?.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
+          <label>
+            Date <span className="muted-cell">(optional)</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr 1fr", gap: 12 }}>
+              <select aria-label="Day" value={day} onChange={(e) => setDay(e.target.value)}>
+                <option value="">Day</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+              <select aria-label="Month" value={month} onChange={(e) => setMonth(e.target.value)}>
+                <option value="">Month</option>
+                {MONTHS.map((m, i) => (
+                  <option key={m} value={i + 1}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <select aria-label="Year" value={year} onChange={(e) => setYear(e.target.value)}>
+                <option value="">Year</option>
+                {YEAR_OPTIONS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </label>
           <div className="two-fields">
             <label>
               Type
@@ -181,14 +250,36 @@ function EditExamDialog({
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [type, setType] = useState<ExamType>("final");
-  const [examDate, setExamDate] = useState("");
+  const [sectionId, setSectionId] = useState("");
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
   const [academicYear, setAcademicYear] = useState("");
+
+  const sections = useQuery({
+    queryKey: ["sections", exam?.classId],
+    queryFn: () => fetchSections(exam!.classId),
+    enabled: !!exam,
+  });
+
+  // Same out-of-range safety net as elsewhere (e.g. student fees' period
+  // year) — an exam dated outside the fixed 10-year window still shows its
+  // real year instead of silently disappearing from the dropdown.
+  const examYear = exam?.examDate ? parseInt(exam.examDate.slice(0, 4), 10) : null;
+  const yearOptions =
+    examYear && !YEAR_OPTIONS.includes(examYear)
+      ? [...YEAR_OPTIONS, examYear].sort((a, b) => a - b)
+      : YEAR_OPTIONS;
 
   useEffect(() => {
     if (exam) {
       setName(exam.name);
       setType(exam.type);
-      setExamDate(exam.examDate ?? "");
+      setSectionId(exam.sectionId ? String(exam.sectionId) : "");
+      const { day: d, month: m, year: y } = splitExamDate(exam.examDate);
+      setDay(d);
+      setMonth(m);
+      setYear(y);
       setAcademicYear(exam.academicYear ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -200,7 +291,8 @@ function EditExamDialog({
       return updateExam(exam.id, {
         name,
         type,
-        examDate: examDate || undefined,
+        sectionId: sectionId ? parseInt(sectionId, 10) : null,
+        examDate: combineExamDate(day, month, year),
         academicYear: academicYear || undefined,
       });
     },
@@ -237,10 +329,46 @@ function EditExamDialog({
                 <input value={exam.classEntity.name} disabled />
               </label>
               <label>
-                Date
-                <DateInput value={examDate} onChange={(e) => setExamDate(e.target.value)} />
+                Section
+                <select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
+                  <option value="">All</option>
+                  {sections.data?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
               </label>
             </div>
+            <label>
+              Date <span className="muted-cell">(optional)</span>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr 1fr", gap: 12 }}>
+                <select aria-label="Day" value={day} onChange={(e) => setDay(e.target.value)}>
+                  <option value="">Day</option>
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+                <select aria-label="Month" value={month} onChange={(e) => setMonth(e.target.value)}>
+                  <option value="">Month</option>
+                  {MONTHS.map((m, i) => (
+                    <option key={m} value={i + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <select aria-label="Year" value={year} onChange={(e) => setYear(e.target.value)}>
+                  <option value="">Year</option>
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      {y}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </label>
             <div className="two-fields">
               <label>
                 Type
@@ -336,14 +464,19 @@ function MarksEntryGrid({
   examId,
   classId,
   className,
+  lockedSectionId,
+  lockedSectionName,
 }: {
   examId: number;
   classId: number;
   className: string;
+  lockedSectionId: number | null;
+  lockedSectionName: string | null;
 }) {
   const queryClient = useQueryClient();
   const [subjectId, setSubjectId] = useState<number | "">("");
   const [sectionId, setSectionId] = useState<number | "">("");
+  const effectiveSectionId = lockedSectionId ?? (sectionId === "" ? undefined : sectionId);
   const [values, setValues] = useState<Record<number, string>>({});
   const [rowErrors, setRowErrors] = useState<Record<number, string>>({});
   const inputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -364,9 +497,8 @@ function MarksEntryGrid({
   }, [subjects.data, subjectId]);
 
   const sheet = useQuery({
-    queryKey: ["marks-sheet", examId, subjectId, sectionId],
-    queryFn: () =>
-      fetchMarksSheet(examId, subjectId as number, sectionId === "" ? undefined : sectionId),
+    queryKey: ["marks-sheet", examId, subjectId, effectiveSectionId],
+    queryFn: () => fetchMarksSheet(examId, subjectId as number, effectiveSectionId),
     enabled: subjectId !== "",
     retry: false,
   });
@@ -503,24 +635,31 @@ function MarksEntryGrid({
             ))}
           </select>
         </label>
-        {sections.data && sections.data.length > 1 && (
-          <label style={{ minWidth: 180 }}>
-            Section
-            <select
-              value={sectionId}
-              onChange={(e) => {
-                if (!confirmDiscardIfDirty()) return;
-                setSectionId(e.target.value ? parseInt(e.target.value, 10) : "");
-              }}
-            >
-              <option value="">All sections</option>
-              {sections.data.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
+        {lockedSectionId ? (
+          <div style={{ fontSize: 12, color: "var(--muted-foreground)" }}>
+            Section: <strong style={{ color: "var(--foreground)" }}>{lockedSectionName}</strong>
+          </div>
+        ) : (
+          sections.data &&
+          sections.data.length > 1 && (
+            <label style={{ minWidth: 180 }}>
+              Section
+              <select
+                value={sectionId}
+                onChange={(e) => {
+                  if (!confirmDiscardIfDirty()) return;
+                  setSectionId(e.target.value ? parseInt(e.target.value, 10) : "");
+                }}
+              >
+                <option value="">All sections</option>
+                {sections.data.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )
         )}
         <AddSubjectDialog classId={classId} className={className} />
       </div>
@@ -596,6 +735,7 @@ export function ExamsPage() {
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [filterClassId, setFilterClassId] = useState<number | "">("");
+  const [filterSectionId, setFilterSectionId] = useState<number | "">("");
   const [filterStatus, setFilterStatus] = useState<"" | "draft" | "published">("");
   const [editingExam, setEditingExam] = useState<ExamDto | null>(null);
   const [deletingExam, setDeletingExam] = useState<ExamDto | null>(null);
@@ -734,9 +874,20 @@ export function ExamsPage() {
   const publishedCount = exams.data?.filter((e) => e.publishedAt).length ?? 0;
   const guardiansNotified = exams.data?.reduce((sum, e) => sum + e.emailedCount, 0) ?? 0;
 
+  const availableFilterSections = useMemo(() => {
+    if (!classes.data) return [];
+    if (filterClassId === "") return classes.data.flatMap((c) => c.sections);
+    return classes.data.find((c) => c.id === filterClassId)?.sections ?? [];
+  }, [classes.data, filterClassId]);
+
+  // Inclusive, same as the backend: an "All sections" exam (sectionId null)
+  // always matches, since every section's students are covered by it.
   const filteredExams = (exams.data ?? []).filter((exam: ExamDto) => {
     if (search && !exam.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (filterClassId !== "" && exam.classId !== filterClassId) return false;
+    if (filterSectionId !== "" && exam.sectionId !== null && exam.sectionId !== filterSectionId) {
+      return false;
+    }
     if (filterStatus === "draft" && exam.publishedAt) return false;
     if (filterStatus === "published" && !exam.publishedAt) return false;
     return true;
@@ -764,7 +915,7 @@ export function ExamsPage() {
       <>
         <PageHeading
           title={selectedExam.name}
-          subtitle={`${selectedExam.classEntity.name} · ${selectedExam.type === "tutorial" ? "Tutorial" : "Final"} exam`}
+          subtitle={`${selectedExam.classEntity.name} · ${selectedExam.section?.name ?? "All sections"} · ${selectedExam.type === "tutorial" ? "Tutorial" : "Final"} exam`}
           action={
             <Button variant="outline" onClick={() => setMode("list")}>
               <ArrowLeft size={14} />
@@ -869,6 +1020,8 @@ export function ExamsPage() {
               examId={selectedExam.id}
               classId={selectedExam.classId}
               className={selectedExam.classEntity.name}
+              lockedSectionId={selectedExam.sectionId}
+              lockedSectionName={selectedExam.section?.name ?? null}
             />
             <div className="results-footer">
               <div>
@@ -963,12 +1116,26 @@ export function ExamsPage() {
           </div>
           <select
             value={filterClassId}
-            onChange={(e) => setFilterClassId(e.target.value ? parseInt(e.target.value, 10) : "")}
+            onChange={(e) => {
+              setFilterClassId(e.target.value ? parseInt(e.target.value, 10) : "");
+              setFilterSectionId("");
+            }}
           >
             <option value="">All classes</option>
             {classes.data?.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterSectionId}
+            onChange={(e) => setFilterSectionId(e.target.value ? parseInt(e.target.value, 10) : "")}
+          >
+            <option value="">All sections</option>
+            {availableFilterSections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
               </option>
             ))}
           </select>
@@ -982,12 +1149,12 @@ export function ExamsPage() {
           </select>
         </div>
         <DataTable
-          headers={["EXAM", "TYPE", "CLASS", "EXAM DATE", "STATUS", "ACTIONS"]}
-          widths="1.3fr .7fr .85fr 1.1fr 1.05fr 1.5fr"
+          headers={["EXAM", "TYPE", "CLASS", "SECTION", "EXAM DATE", "STATUS", "ACTIONS"]}
+          widths="1.2fr .6fr .8fr .8fr 1fr 1.05fr 1.5fr"
         >
-          {exams.isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+          {exams.isLoading && <EmptyRow colSpan={7}>Loading…</EmptyRow>}
           {!exams.isLoading && filteredExams.length === 0 && (
-            <EmptyRow colSpan={6}>
+            <EmptyRow colSpan={7}>
               {exams.data?.length === 0
                 ? "No exams yet — create one."
                 : "No exams match your filters."}
@@ -1009,6 +1176,7 @@ export function ExamsPage() {
                 </Badge>
               </td>
               <td>{exam.classEntity.name}</td>
+              <td className="muted-cell">{exam.section?.name ?? "All"}</td>
               <td className="mono strong">{exam.examDate ?? "—"}</td>
               <td>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>

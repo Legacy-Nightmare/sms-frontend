@@ -15,6 +15,7 @@ export interface ExamDto {
   name: string;
   type: ExamType;
   classId: number;
+  sectionId: number | null;
   examDate: string | null;
   academicYear: string | null;
   publishedAt: string | null;
@@ -22,6 +23,7 @@ export interface ExamDto {
   resultsAnnouncedAt: string | null;
   createdAt: string;
   classEntity: { id: number; level: number | null; name: string };
+  section: { id: number; name: string } | null;
 }
 
 export interface MarksSheetRowDto {
@@ -58,9 +60,12 @@ export interface StudentExamResultDto {
   hasGuardianEmail: boolean;
 }
 
-export function fetchExams(classId?: number) {
-  const qs = classId ? `?classId=${classId}` : "";
-  return apiGet<ExamDto[]>(`/exams${qs}`);
+export function fetchExams(filters?: { classId?: number; sectionId?: number }) {
+  const qs = new URLSearchParams();
+  if (filters?.classId) qs.set("classId", String(filters.classId));
+  if (filters?.sectionId) qs.set("sectionId", String(filters.sectionId));
+  const query = qs.toString();
+  return apiGet<ExamDto[]>(`/exams${query ? `?${query}` : ""}`);
 }
 
 export function fetchExam(id: number) {
@@ -101,6 +106,7 @@ export function createExam(input: {
   name: string;
   type: ExamType;
   classId: number;
+  sectionId?: number | undefined;
   examDate?: string | undefined;
   academicYear?: string | undefined;
 }) {
@@ -112,6 +118,7 @@ export function updateExam(
   input: {
     name?: string | undefined;
     type?: ExamType | undefined;
+    sectionId?: number | null | undefined;
     examDate?: string | undefined;
     academicYear?: string | undefined;
   },
