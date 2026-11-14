@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  ArrowLeft,
   CheckCircle2,
   ClipboardList,
   Download,
@@ -591,6 +592,7 @@ function MarksEntryGrid({
 
 export function ExamsPage() {
   const queryClient = useQueryClient();
+  const [mode, setMode] = useState<"list" | "detail">("list");
   const [selectedExamId, setSelectedExamId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [filterClassId, setFilterClassId] = useState<number | "">("");
@@ -602,12 +604,10 @@ export function ExamsPage() {
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
   const selectedExam = exams.data?.find((e) => e.id === selectedExamId) ?? null;
 
-  useEffect(() => {
-    const first = exams.data?.[0];
-    if (selectedExamId === null && first) {
-      setSelectedExamId(first.id);
-    }
-  }, [exams.data, selectedExamId]);
+  const openExam = (examId: number) => {
+    setSelectedExamId(examId);
+    setMode("detail");
+  };
 
   const examResults = useQuery({
     queryKey: ["exam-results", selectedExamId],
@@ -759,6 +759,144 @@ export function ExamsPage() {
     );
   };
 
+  if (mode === "detail" && selectedExam) {
+    return (
+      <>
+        <PageHeading
+          title={selectedExam.name}
+          subtitle={`${selectedExam.classEntity.name} · ${selectedExam.type === "tutorial" ? "Tutorial" : "Final"} exam`}
+          action={
+            <Button variant="outline" onClick={() => setMode("list")}>
+              <ArrowLeft size={14} />
+              Back to exams
+            </Button>
+          }
+        />
+
+        {selectedExam.publishedAt && (
+          <Panel>
+            <div className="panel-title">
+              <h2>
+                Published results · {selectedExam.classEntity.name} · {selectedExam.name}
+              </h2>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Badge tone="green">Published</Badge>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={notify.isPending}
+                  onClick={async () => {
+                    if (await verifyMarksComplete(selectedExam)) notify.mutate(selectedExam.id);
+                  }}
+                >
+                  <Send size={14} />
+                  {notify.isPending ? "Sending…" : "Send to guardians"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!examResults.data}
+                  onClick={downloadResultsReport}
+                >
+                  <Download size={14} />
+                  Download report
+                </Button>
+              </div>
+            </div>
+            <DataTable
+              headers={[
+                "STUDENT",
+                "TOTAL MARKS",
+                "PERCENTAGE",
+                "GRADE",
+                "GUARDIAN NOTIFICATION",
+                "ACTION",
+              ]}
+              widths="1.6fr 1fr .9fr 1.2fr 1.3fr 1.1fr"
+            >
+              {examResults.isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
+              {examResults.data?.map((r) => (
+                <tr key={r.studentId}>
+                  <td>
+                    <StudentAvatar name={r.studentName} photoUrl={null} />
+                    {r.studentName} <span className="muted-cell mono">({r.studentCode})</span>
+                  </td>
+                  <td className="mono">
+                    {r.totalObtained} / {r.totalFullMarks}
+                  </td>
+                  <td className="mono">{r.percentage}%</td>
+                  <td>
+                    <Badge tone="amber">
+                      {r.grade} · GPA {r.gpa.toFixed(2)}
+                    </Badge>
+                  </td>
+                  <td>
+                    <span
+                      className={`status-dot ${r.hasGuardianEmail ? "status-dot-green" : "status-dot-amber"}`}
+                    />
+                    {r.hasGuardianEmail ? "Sent" : "Pending"}
+                  </td>
+                  <td>
+                    {selectedExam.academicYear ? (
+                      <StudentMarksheetDialog
+                        classId={selectedExam.classId}
+                        studentId={r.studentId}
+                        academicYear={selectedExam.academicYear}
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            Marksheet
+                          </Button>
+                        }
+                      />
+                    ) : (
+                      <span
+                        className="muted-cell"
+                        title="Set an academic year on this exam to view a marksheet"
+                      >
+                        —
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </DataTable>
+          </Panel>
+        )}
+
+        {!selectedExam.publishedAt && (
+          <>
+            <MarksEntryGrid
+              examId={selectedExam.id}
+              classId={selectedExam.classId}
+              className={selectedExam.classEntity.name}
+            />
+            <div className="results-footer">
+              <div>
+                {totalSubjects === 0 && (
+                  <span className="muted-cell" style={{ fontSize: 12 }}>
+                    Add a subject above before marks can be entered
+                  </span>
+                )}
+                {totalSubjects > 0 && !marksComplete && (
+                  <span className="muted-cell" style={{ fontSize: 12 }}>
+                    {studentsComplete}/{totalStudents} students fully scored across {totalSubjects}{" "}
+                    subject{totalSubjects === 1 ? "" : "s"} — finish every subject for every student,
+                    then publish from the exam's ⋯ menu on the exams list
+                  </span>
+                )}
+                {totalSubjects > 0 && marksComplete && (
+                  <span style={{ fontSize: 12, color: "var(--green)" }}>
+                    All marks entered — publish this exam from its ⋯ menu on the exams list
+                  </span>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeading
@@ -858,7 +996,7 @@ export function ExamsPage() {
           {filteredExams.map((exam) => (
             <tr
               key={exam.id}
-              onClick={() => setSelectedExamId(exam.id)}
+              onClick={() => openExam(exam.id)}
               style={{
                 cursor: "pointer",
                 background: exam.id === selectedExamId ? "var(--row-active)" : undefined,
@@ -883,7 +1021,7 @@ export function ExamsPage() {
                 </div>
               </td>
               <td className="row-actions" onClick={(e) => e.stopPropagation()}>
-                <Button size="sm" variant="outline" onClick={() => setSelectedExamId(exam.id)}>
+                <Button size="sm" variant="outline" onClick={() => openExam(exam.id)}>
                   {exam.publishedAt ? "View results" : "Enter marks"}
                 </Button>
                 <DropdownMenu>
@@ -959,127 +1097,6 @@ export function ExamsPage() {
           ))}
         </DataTable>
       </Panel>
-
-      {selectedExam && selectedExam.publishedAt && (
-        <Panel>
-          <div className="panel-title">
-            <h2>
-              Published results · {selectedExam.classEntity.name} · {selectedExam.name}
-            </h2>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <Badge tone="green">Published</Badge>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={notify.isPending}
-                onClick={async () => {
-                  if (await verifyMarksComplete(selectedExam)) notify.mutate(selectedExam.id);
-                }}
-              >
-                <Send size={14} />
-                {notify.isPending ? "Sending…" : "Send to guardians"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={!examResults.data}
-                onClick={downloadResultsReport}
-              >
-                <Download size={14} />
-                Download report
-              </Button>
-            </div>
-          </div>
-          <DataTable
-            headers={[
-              "STUDENT",
-              "TOTAL MARKS",
-              "PERCENTAGE",
-              "GRADE",
-              "GUARDIAN NOTIFICATION",
-              "ACTION",
-            ]}
-            widths="1.6fr 1fr .9fr 1.2fr 1.3fr 1.1fr"
-          >
-            {examResults.isLoading && <EmptyRow colSpan={6}>Loading…</EmptyRow>}
-            {examResults.data?.map((r) => (
-              <tr key={r.studentId}>
-                <td>
-                  <StudentAvatar name={r.studentName} photoUrl={null} />
-                  {r.studentName} <span className="muted-cell mono">({r.studentCode})</span>
-                </td>
-                <td className="mono">
-                  {r.totalObtained} / {r.totalFullMarks}
-                </td>
-                <td className="mono">{r.percentage}%</td>
-                <td>
-                  <Badge tone="amber">
-                    {r.grade} · GPA {r.gpa.toFixed(2)}
-                  </Badge>
-                </td>
-                <td>
-                  <span
-                    className={`status-dot ${r.hasGuardianEmail ? "status-dot-green" : "status-dot-amber"}`}
-                  />
-                  {r.hasGuardianEmail ? "Sent" : "Pending"}
-                </td>
-                <td>
-                  {selectedExam.academicYear ? (
-                    <StudentMarksheetDialog
-                      classId={selectedExam.classId}
-                      studentId={r.studentId}
-                      academicYear={selectedExam.academicYear}
-                      trigger={
-                        <Button size="sm" variant="outline">
-                          Marksheet
-                        </Button>
-                      }
-                    />
-                  ) : (
-                    <span
-                      className="muted-cell"
-                      title="Set an academic year on this exam to view a marksheet"
-                    >
-                      —
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </DataTable>
-        </Panel>
-      )}
-
-      {selectedExam && !selectedExam.publishedAt && (
-        <>
-          <MarksEntryGrid
-            examId={selectedExam.id}
-            classId={selectedExam.classId}
-            className={selectedExam.classEntity.name}
-          />
-          <div className="results-footer">
-            <div>
-              {totalSubjects === 0 && (
-                <span className="muted-cell" style={{ fontSize: 12 }}>
-                  Add a subject above before marks can be entered
-                </span>
-              )}
-              {totalSubjects > 0 && !marksComplete && (
-                <span className="muted-cell" style={{ fontSize: 12 }}>
-                  {studentsComplete}/{totalStudents} students fully scored across {totalSubjects}{" "}
-                  subject{totalSubjects === 1 ? "" : "s"} — finish every subject for every student,
-                  then publish from the exam's ⋯ menu above
-                </span>
-              )}
-              {totalSubjects > 0 && marksComplete && (
-                <span style={{ fontSize: 12, color: "var(--green)" }}>
-                  All marks entered — publish this exam from its ⋯ menu above
-                </span>
-              )}
-            </div>
-          </div>
-        </>
-      )}
 
       <EditExamDialog exam={editingExam} onOpenChange={(open) => !open && setEditingExam(null)} />
       <DeleteExamDialog
