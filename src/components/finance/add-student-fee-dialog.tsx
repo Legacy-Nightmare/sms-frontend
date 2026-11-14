@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { createMultiStudentFee, recordStudentPayment } from "@/lib/finance-api";
+import { createMultiStudentFee, fetchExamsForBilling, recordStudentPayment } from "@/lib/finance-api";
 import { ApiError } from "@/lib/api";
 import type { StudentDto } from "@/lib/students-api";
 import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
@@ -134,12 +134,21 @@ export function AddStudentFeeDialog({
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<PaymentStatus>("paid");
   const [partialAmount, setPartialAmount] = useState("");
+  const [examId, setExamId] = useState("");
+
+  const examFilled = (amounts["exam"] ?? "").trim() !== "";
+  const exams = useQuery({
+    queryKey: ["exams-for-billing", student.classId],
+    queryFn: () => fetchExamsForBilling(student.classId),
+    enabled: examFilled,
+  });
 
   const mutation = useMutation({
     mutationFn: async () => {
       const fees = FEE_FIELDS.filter((f) => (amounts[f.key] ?? "").trim() !== "").map((f) => ({
         name: f.feeTypeName,
         amount: parseInt(amounts[f.key] ?? "", 10),
+        examId: f.key === "exam" && examId ? parseInt(examId, 10) : undefined,
       }));
       const year = periodYear ? parseInt(periodYear, 10) : undefined;
 
@@ -220,6 +229,10 @@ export function AddStudentFeeDialog({
               toast.error("Enter an amount for at least one fee");
               return;
             }
+            if (examFilled && !examId) {
+              toast.error("Select which exam this exam fee is for");
+              return;
+            }
             if (months.length > 0 && !periodYear) {
               toast.error("Select a year for the selected month(s)");
               return;
@@ -258,6 +271,22 @@ export function AddStudentFeeDialog({
               </label>
             ))}
           </div>
+          {examFilled && (
+            <label>
+              Exam <span className="muted-cell">(required for Exam Fee)</span>
+              <select required value={examId} onChange={(e) => setExamId(e.target.value)}>
+                <option value="" disabled>
+                  {exams.isLoading ? "Loading exams…" : "Select exam"}
+                </option>
+                {exams.data?.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                    {e.academicYear ? ` (${e.academicYear})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="two-fields">
             <label>
               Months

@@ -1,6 +1,5 @@
 import { jsPDF } from "jspdf";
 import { SCHOOL_NAME } from "@/lib/school-info";
-import { MONTHS } from "@/lib/month-year-options";
 import type { StudentFeeDto } from "@/lib/finance-api";
 import type { StudentDto } from "@/lib/students-api";
 
@@ -39,48 +38,28 @@ export async function downloadAdmitCardPdf(
   const doc = new jsPDF({ unit: "mm", format: "a5" });
   const left = 14;
   const right = 134; // A5 landscape-ish width minus margin (a5 portrait is 148mm wide)
-  const centerX = (left + right) / 2;
+  const cardTop = 10;
 
   doc.setDrawColor(0);
   doc.setLineWidth(0.4);
-  doc.roundedRect(left, 10, right - left, 190, 2, 2);
+  doc.roundedRect(left, cardTop, right - left, 190, 2, 2);
 
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text(SCHOOL_NAME, centerX, 20, { align: "center" });
-  if (phone) {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`TEL.#${phone}`, centerX, 25, { align: "center" });
-  }
-
-  doc.setLineWidth(0.3);
-  doc.line(left + 4, 29, right - 4, 29);
-
-  doc.setFontSize(16);
-  doc.setFont("helvetica", "bold");
-  doc.text("ADMIT CARD", centerX, 38, { align: "center" });
-
-  const examLabel = fee.periodMonth
-    ? `${MONTHS[fee.periodMonth - 1]}, ${fee.periodYear}`
-    : String(fee.periodYear ?? "");
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  if (examLabel) {
-    doc.text(`Examination: ${examLabel}`, centerX, 45, { align: "center" });
-  }
-
-  // Photo box, top-right of the detail area.
-  const photoX = right - 32;
-  const photoY = 52;
+  // Photo, top-left — drawn first so the header text column's width (and
+  // therefore its wrapping) is computed around it, never the other way
+  // around. A long school name wraps onto another line instead of
+  // overlapping the photo or running off the card.
+  const photoW = 26;
+  const photoH = 32;
+  const photoX = left + 5;
+  const photoY = cardTop + 6;
   doc.setDrawColor(150, 150, 150);
   doc.setLineWidth(0.2);
-  doc.rect(photoX, photoY, 26, 32);
+  doc.rect(photoX, photoY, photoW, photoH);
   if (photoUrl) {
     const dataUrl = await loadImageAsDataUrl(photoUrl);
     if (dataUrl) {
       try {
-        doc.addImage(dataUrl, "JPEG", photoX, photoY, 26, 32);
+        doc.addImage(dataUrl, "JPEG", photoX, photoY, photoW, photoH);
       } catch {
         // Unsupported format or corrupt data — leave the empty box.
       }
@@ -88,13 +67,51 @@ export async function downloadAdmitCardPdf(
   } else {
     doc.setFontSize(7);
     doc.setTextColor(150, 150, 150);
-    doc.text("PHOTO", photoX + 13, photoY + 17, { align: "center" });
+    doc.text("PHOTO", photoX + photoW / 2, photoY + photoH / 2, { align: "center" });
     doc.setTextColor(0, 0, 0);
   }
 
-  let y = 60;
+  const textLeft = photoX + photoW + 6;
+  const textWidth = right - 4 - textLeft;
+  let y = photoY + 6;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  const nameLines = doc.splitTextToSize(SCHOOL_NAME, textWidth);
+  doc.text(nameLines, textLeft, y);
+  y += nameLines.length * 5.2;
+
+  if (phone) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.text(`TEL.#${phone}`, textLeft, y);
+    y += 5.5;
+  }
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("ADMIT CARD", textLeft, y);
+  y += 6;
+
+  const examLabel = fee.examName ?? "";
+  if (examLabel) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    const examLines = doc.splitTextToSize(examLabel, textWidth);
+    doc.text(examLines, textLeft, y);
+    y += examLines.length * 5;
+  }
+
+  // Resume full card width once past whichever of the photo or the (now
+  // variable-height) header text block is taller.
+  y = Math.max(y, photoY + photoH) + 10;
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.3);
+  doc.line(left + 4, y, right - 4, y);
+  y += 10;
+
   const lineGap = 9;
-  const fieldWidth = photoX - left - 10;
+  const fieldWidth = right - left - 8;
 
   function field(label: string, value: string) {
     doc.setFont("helvetica", "bold");

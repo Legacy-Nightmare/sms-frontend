@@ -51,7 +51,15 @@ export interface StudentFeeDto {
   periodMonth: number | null;
   periodYear: number | null;
   note: string | null;
+  examId: number | null;
+  examName: string | null;
   createdAt: string;
+}
+
+export interface BillingExamDto {
+  id: number;
+  name: string;
+  academicYear: string | null;
 }
 
 export interface StudentFeeSummaryDto {
@@ -119,6 +127,8 @@ function newIdempotencyKey() {
 // ---- fee types + class fees ----
 
 export const fetchFeeTypes = () => apiGet<FeeTypeDto[]>("/finance/fee-types");
+export const fetchExamsForBilling = (classId?: number | undefined) =>
+  apiGet<BillingExamDto[]>(`/finance/exams${classId ? `?classId=${classId}` : ""}`);
 export const createFeeType = (name: string) => apiPost<FeeTypeDto>("/finance/fee-types", { name });
 export const fetchClassFees = (classId: number) =>
   apiGet<ClassFeeDto[]>(`/finance/class-fees?classId=${classId}`);
@@ -156,6 +166,7 @@ export const createStudentFee = (input: {
   periodMonth?: number | undefined;
   periodYear?: number | undefined;
   note?: string | undefined;
+  examId?: number | undefined;
 }) => apiPost<StudentFeeDto>("/finance/student-fees", input);
 
 export const bulkApplyStudentFee = (input: {
@@ -165,6 +176,7 @@ export const bulkApplyStudentFee = (input: {
   periodMonth?: number | undefined;
   periodYear?: number | undefined;
   note?: string | undefined;
+  examId?: number | undefined;
 }) => apiPost<{ created: number; skipped: number }>("/finance/student-fees/bulk", input);
 
 export const createMultiStudentFee = (input: {
@@ -172,7 +184,7 @@ export const createMultiStudentFee = (input: {
   periodMonth?: number | undefined;
   periodYear?: number | undefined;
   note?: string | undefined;
-  fees: Array<{ name: string; amount: number }>;
+  fees: Array<{ name: string; amount: number; examId?: number | undefined }>;
 }) =>
   apiPost<{ created: Array<{ id: number; name: string; amount: number }>; skipped: string[] }>(
     "/finance/student-fees/multi",

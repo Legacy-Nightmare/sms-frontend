@@ -5,7 +5,6 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SCHOOL_NAME } from "@/lib/school-info";
-import { MONTHS } from "@/lib/month-year-options";
 import { fetchSchoolProfile } from "@/lib/website-api";
 import { studentPhotoUrl, type StudentDto } from "@/lib/students-api";
 import { downloadAdmitCardPdf } from "@/lib/admit-card-pdf";
@@ -31,9 +30,7 @@ export function AdmitCardDialog({
   const [photoFailed, setPhotoFailed] = useState(false);
 
   const photoUrl = studentPhotoUrl(student.photoUrl);
-  const examLabel = fee.periodMonth
-    ? `${MONTHS[fee.periodMonth - 1]}, ${fee.periodYear}`
-    : String(fee.periodYear ?? "");
+  const examLabel = fee.examName ?? "";
 
   const handleDownload = async () => {
     setDownloading(true);
@@ -51,18 +48,20 @@ export function AdmitCardDialog({
       <DialogContent className="print-dialog" style={{ maxWidth: 480 }}>
         <div className="print-area">
           <div className="admit-card">
-            <div className="admit-card-photo">
-              {photoUrl && !photoFailed ? (
-                <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} />
-              ) : (
-                <span>Photo</span>
-              )}
-            </div>
-            <div className="receipt-header">
-              <p style={{ fontWeight: 700, fontSize: 15 }}>{SCHOOL_NAME}</p>
-              {profile.data?.phone && <p>TEL.#{profile.data.phone}</p>}
-              <h2 style={{ marginTop: 8 }}>Admit Card</h2>
-              {examLabel && <p>Examination: {examLabel}</p>}
+            <div className="admit-card-top">
+              <div className="admit-card-photo">
+                {photoUrl && !photoFailed ? (
+                  <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} />
+                ) : (
+                  <span>Photo</span>
+                )}
+              </div>
+              <div className="admit-card-header">
+                <p style={{ fontWeight: 700, fontSize: 15 }}>{SCHOOL_NAME}</p>
+                {profile.data?.phone && <p>TEL.#{profile.data.phone}</p>}
+                <h2>Admit Card</h2>
+                {examLabel && <p style={{ fontWeight: 600 }}>{examLabel}</p>}
+              </div>
             </div>
 
             <div className="receipt-field">

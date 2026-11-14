@@ -40,6 +40,7 @@ import {
   bulkApplyStudentFee,
   createStudentFee,
   deleteStudentFee,
+  fetchExamsForBilling,
   fetchFeeTypes,
   fetchStudentFee,
   fetchStudentFees,
@@ -78,6 +79,7 @@ function BillFeeDialog() {
   const [amount, setAmount] = useState("");
   const [periodMonth, setPeriodMonth] = useState("");
   const [periodYear, setPeriodYear] = useState("");
+  const [examId, setExamId] = useState("");
 
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
   const feeTypes = useQuery({ queryKey: ["fee-types"], queryFn: fetchFeeTypes });
@@ -85,6 +87,14 @@ function BillFeeDialog() {
     queryKey: ["students", classId],
     queryFn: () => fetchStudents({ classId: parseInt(classId, 10) }),
     enabled: mode === "student" && !!classId,
+  });
+  const isExamFee =
+    feeTypes.data?.find((f) => String(f.id) === feeTypeId)?.name.trim().toLowerCase() ===
+    "exam fee";
+  const exams = useQuery({
+    queryKey: ["exams-for-billing", classId],
+    queryFn: () => fetchExamsForBilling(parseInt(classId, 10)),
+    enabled: isExamFee && !!classId,
   });
 
   const reset = () => {
@@ -94,6 +104,7 @@ function BillFeeDialog() {
     setAmount("");
     setPeriodMonth("");
     setPeriodYear("");
+    setExamId("");
   };
 
   const mutation = useMutation({
@@ -101,6 +112,7 @@ function BillFeeDialog() {
       const period = {
         periodMonth: periodMonth ? parseInt(periodMonth, 10) : undefined,
         periodYear: periodYear ? parseInt(periodYear, 10) : undefined,
+        examId: isExamFee && examId ? parseInt(examId, 10) : undefined,
       };
       if (mode === "class") {
         return bulkApplyStudentFee({
@@ -146,6 +158,10 @@ function BillFeeDialog() {
           className="student-form"
           onSubmit={(e: FormEvent) => {
             e.preventDefault();
+            if (isExamFee && !examId) {
+              toast.error("Select which exam this exam fee is for");
+              return;
+            }
             mutation.mutate();
           }}
         >
@@ -167,7 +183,14 @@ function BillFeeDialog() {
           </div>
           <label>
             Class
-            <select required value={classId} onChange={(e) => setClassId(e.target.value)}>
+            <select
+              required
+              value={classId}
+              onChange={(e) => {
+                setClassId(e.target.value);
+                setExamId("");
+              }}
+            >
               <option value="" disabled>
                 Select class
               </option>
@@ -196,7 +219,14 @@ function BillFeeDialog() {
           <div className="two-fields">
             <label>
               Fee type
-              <select required value={feeTypeId} onChange={(e) => setFeeTypeId(e.target.value)}>
+              <select
+                required
+                value={feeTypeId}
+                onChange={(e) => {
+                  setFeeTypeId(e.target.value);
+                  setExamId("");
+                }}
+              >
                 <option value="" disabled>
                   Select fee type
                 </option>
@@ -218,6 +248,22 @@ function BillFeeDialog() {
               />
             </label>
           </div>
+          {isExamFee && (
+            <label>
+              Exam <span className="muted-cell">(required for Exam Fee)</span>
+              <select required value={examId} onChange={(e) => setExamId(e.target.value)}>
+                <option value="" disabled>
+                  {exams.isLoading ? "Loading exams…" : "Select exam"}
+                </option>
+                {exams.data?.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                    {e.academicYear ? ` (${e.academicYear})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="two-fields">
             <label>
               Period month <span className="muted-cell">(optional, for recurring)</span>
@@ -1159,8 +1205,9 @@ export function StudentFeesTab() {
                     </DropdownMenuItem>
                     {f.feeTypeName.trim().toLowerCase() === "exam fee" && (
                       <DropdownMenuItem
-                        disabled={f.status !== "PAID"}
+                        disabled={f.status !== "PAID" || !f.examId}
                         onClick={() => openAdmitCard(f)}
+                        title={!f.examId ? "This fee has no exam linked — it predates the Exam field" : undefined}
                       >
                         <IdCard size={14} />
                         Download Admit Card
