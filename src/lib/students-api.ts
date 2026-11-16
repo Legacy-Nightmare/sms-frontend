@@ -40,6 +40,17 @@ export function studentPhotoUrl(photoUrl: string | null): string | null {
   return `${baseUrl}/${relativePath}`;
 }
 
+// For client-side fetch() embedding (PDF generation) rather than a plain
+// <img src> — the storage bucket itself sends no CORS headers, so a direct
+// fetch() of studentPhotoUrl() fails even though the browser can display it
+// fine in an <img>. This hits the backend instead, which fetches the photo
+// server-to-server (no CORS involved) and streams it back with its own
+// CORS headers.
+export function studentPhotoProxyUrl(studentId: number): string {
+  const baseUrl = API_BASE_URL.replace(/\/+$/, "");
+  return `${baseUrl}/students/${studentId}/photo`;
+}
+
 export type GuardianRelation = "father" | "mother" | "other";
 
 export interface GuardianDto {

@@ -1,15 +1,16 @@
 import { jsPDF } from "jspdf";
+import { getToken } from "@/lib/api";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
 import type { StudentFeeDto } from "@/lib/finance-api";
-import type { StudentDto } from "@/lib/students-api";
+import { studentPhotoProxyUrl, type StudentDto } from "@/lib/students-api";
 
-// Fetches the photo and converts it to a data URL so jsPDF's addImage (which
-// needs base64, not a URL) can embed it. Cross-origin photo hosts that don't
-// send permissive CORS headers will fail here — caught by the caller, which
-// just omits the photo rather than blocking the whole PDF over it.
-async function loadImageAsDataUrl(url: string): Promise<string | null> {
+// Fetches an image and converts it to a data URL so jsPDF's addImage (which
+// needs base64, not a URL) can embed it. Cross-origin hosts that don't send
+// permissive CORS headers will fail here — caught by the caller, which just
+// omits the image rather than blocking the whole PDF over it.
+async function loadImageAsDataUrl(url: string, headers?: HeadersInit): Promise<string | null> {
   try {
-    const res = await fetch(url, { mode: "cors" });
+    const res = await fetch(url, headers ? { mode: "cors", headers } : { mode: "cors" });
     if (!res.ok) return null;
     const blob = await res.blob();
     return await new Promise((resolve, reject) => {
@@ -76,7 +77,15 @@ export async function downloadAdmitCardPdf(
   doc.setLineWidth(0.2);
   doc.rect(photoX, photoY, photoW, photoH);
   if (photoUrl) {
-    const dataUrl = await loadImageAsDataUrl(photoUrl);
+    // Routed through the backend's own proxy (not fetched from the storage
+    // bucket directly) since the bucket sends no CORS headers — see
+    // studentPhotoProxyUrl's comment. Needs the same bearer token the rest
+    // of the authenticated API calls use.
+    const token = getToken();
+    const dataUrl = await loadImageAsDataUrl(
+      studentPhotoProxyUrl(student.id),
+      token ? { Authorization: `Bearer ${token}` } : undefined,
+    );
     if (dataUrl) {
       try {
         doc.addImage(dataUrl, "JPEG", photoX, photoY, photoW, photoH);
