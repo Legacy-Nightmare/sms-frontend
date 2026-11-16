@@ -34,6 +34,8 @@ import { Badge, DataTable, EmptyRow, PageHeading, Panel } from "@/components/das
 import { AddSubjectDialog } from "@/components/add-subject-dialog";
 import { StudentAvatar } from "@/components/student-avatar";
 import { StudentMarksheetDialog } from "@/components/student-marksheet-dialog";
+import { ProgressReportDialog } from "@/components/progress-report-dialog";
+import { DateInput } from "@/components/ui/date-input";
 import { fetchClasses, fetchSections } from "@/lib/academics-api";
 import { MONTHS, YEAR_OPTIONS } from "@/lib/month-year-options";
 import {
@@ -50,6 +52,7 @@ import {
   publishExam,
   retractResultsAnnouncement,
   updateExam,
+  type ExamComponent,
   type ExamDto,
   type ExamType,
   type MarkValidationError,
@@ -87,6 +90,9 @@ function CreateExamDialog() {
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [academicYear, setAcademicYear] = useState(CURRENT_YEAR);
+  const [component, setComponent] = useState<ExamComponent | "">("");
+  const [attendancePeriodFrom, setAttendancePeriodFrom] = useState("");
+  const [attendancePeriodTo, setAttendancePeriodTo] = useState("");
 
   const sections = useQuery({
     queryKey: ["sections", classId],
@@ -103,6 +109,11 @@ function CreateExamDialog() {
         sectionId: sectionId ? parseInt(sectionId, 10) : undefined,
         examDate: combineExamDate(day, month, year),
         academicYear: academicYear || undefined,
+        component: component || undefined,
+        attendancePeriodFrom:
+          component === "semester_final" ? attendancePeriodFrom || undefined : undefined,
+        attendancePeriodTo:
+          component === "semester_final" ? attendancePeriodTo || undefined : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
@@ -116,6 +127,9 @@ function CreateExamDialog() {
       setMonth("");
       setYear("");
       setAcademicYear(CURRENT_YEAR);
+      setComponent("");
+      setAttendancePeriodFrom("");
+      setAttendancePeriodTo("");
     },
     onError: (error) =>
       toast.error(error instanceof ApiError ? error.message : "Couldn't create exam"),
@@ -226,6 +240,36 @@ function CreateExamDialog() {
               />
             </label>
           </div>
+          <label>
+            Progress report component <span className="muted-cell">(optional)</span>
+            <select
+              value={component}
+              onChange={(e) => setComponent(e.target.value as ExamComponent | "")}
+            >
+              <option value="">Not part of a progress report</option>
+              <option value="ct1">CT1 (class test 1)</option>
+              <option value="ct2">CT2 (class test 2)</option>
+              <option value="semester_final">Semester Final</option>
+            </select>
+          </label>
+          {component === "semester_final" && (
+            <div className="two-fields">
+              <label>
+                Attendance period from
+                <DateInput
+                  value={attendancePeriodFrom}
+                  onChange={(e) => setAttendancePeriodFrom(e.target.value)}
+                />
+              </label>
+              <label>
+                Attendance period to
+                <DateInput
+                  value={attendancePeriodTo}
+                  onChange={(e) => setAttendancePeriodTo(e.target.value)}
+                />
+              </label>
+            </div>
+          )}
           <div className="drawer-actions">
             <DialogClose asChild>
               <Button type="button" variant="outline">
@@ -259,6 +303,9 @@ function EditExamDialog({
   const [month, setMonth] = useState("");
   const [year, setYear] = useState("");
   const [academicYear, setAcademicYear] = useState("");
+  const [component, setComponent] = useState<ExamComponent | "">("");
+  const [attendancePeriodFrom, setAttendancePeriodFrom] = useState("");
+  const [attendancePeriodTo, setAttendancePeriodTo] = useState("");
 
   const sections = useQuery({
     queryKey: ["sections", exam?.classId],
@@ -285,6 +332,9 @@ function EditExamDialog({
       setMonth(m);
       setYear(y);
       setAcademicYear(exam.academicYear ?? CURRENT_YEAR);
+      setComponent(exam.component ?? "");
+      setAttendancePeriodFrom(exam.attendancePeriodFrom ?? "");
+      setAttendancePeriodTo(exam.attendancePeriodTo ?? "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam?.id]);
@@ -298,6 +348,10 @@ function EditExamDialog({
         sectionId: sectionId ? parseInt(sectionId, 10) : null,
         examDate: combineExamDate(day, month, year),
         academicYear: academicYear || undefined,
+        component: component || null,
+        attendancePeriodFrom:
+          component === "semester_final" ? attendancePeriodFrom || null : null,
+        attendancePeriodTo: component === "semester_final" ? attendancePeriodTo || null : null,
       });
     },
     onSuccess: () => {
@@ -390,6 +444,36 @@ function EditExamDialog({
                 />
               </label>
             </div>
+            <label>
+              Progress report component <span className="muted-cell">(optional)</span>
+              <select
+                value={component}
+                onChange={(e) => setComponent(e.target.value as ExamComponent | "")}
+              >
+                <option value="">Not part of a progress report</option>
+                <option value="ct1">CT1 (class test 1)</option>
+                <option value="ct2">CT2 (class test 2)</option>
+                <option value="semester_final">Semester Final</option>
+              </select>
+            </label>
+            {component === "semester_final" && (
+              <div className="two-fields">
+                <label>
+                  Attendance period from
+                  <DateInput
+                    value={attendancePeriodFrom}
+                    onChange={(e) => setAttendancePeriodFrom(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Attendance period to
+                  <DateInput
+                    value={attendancePeriodTo}
+                    onChange={(e) => setAttendancePeriodTo(e.target.value)}
+                  />
+                </label>
+              </div>
+            )}
             <div className="drawer-actions">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
@@ -991,7 +1075,7 @@ export function ExamsPage() {
                     />
                     {r.hasGuardianEmail ? "Sent" : "Pending"}
                   </td>
-                  <td>
+                  <td style={{ display: "flex", gap: 6 }}>
                     {selectedExam.academicYear ? (
                       <StudentMarksheetDialog
                         classId={selectedExam.classId}
@@ -1010,6 +1094,18 @@ export function ExamsPage() {
                       >
                         —
                       </span>
+                    )}
+                    {selectedExam.component === "semester_final" && selectedExam.academicYear && (
+                      <ProgressReportDialog
+                        classId={selectedExam.classId}
+                        studentId={r.studentId}
+                        academicYear={selectedExam.academicYear}
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            Progress Report
+                          </Button>
+                        }
+                      />
                     )}
                   </td>
                 </tr>

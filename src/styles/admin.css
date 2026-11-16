@@ -279,6 +279,7 @@ td { height: 45px; padding: 0 17px; white-space: nowrap; color: var(--foreground
 .editable-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .editable-row input[type="text"] { flex: 1; }
 .editable-row .fullmarks-input { flex: 0 0 72px; }
+.editable-row .component-marks-input { flex: 0 0 52px; }
 .editable-row-label { color: var(--muted-foreground); font-size: 11px; font-weight: 500; margin-bottom: 7px; }
 .filters { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 16px; margin-bottom: 16px; }
 /* justify-content: flex-end pins the actual input/select to the bottom of

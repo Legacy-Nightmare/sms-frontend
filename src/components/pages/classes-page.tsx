@@ -144,6 +144,29 @@ interface SubjectRow {
   name: string;
   fullMarks: number;
   originalFullMarks?: number;
+  // Progress-report split (CT1/CT2/Semester Final) — "" means not configured.
+  // All three must be filled together and sum to fullMarks, or left blank.
+  ct1FullMarks: string;
+  ct2FullMarks: string;
+  semesterFinalFullMarks: string;
+  originalCt1FullMarks?: string;
+  originalCt2FullMarks?: string;
+  originalSemesterFinalFullMarks?: string;
+}
+
+// Shared by both the "add subject" and "edit subject" save paths below.
+function progressReportSplitError(row: SubjectRow): string | null {
+  const values = [row.ct1FullMarks, row.ct2FullMarks, row.semesterFinalFullMarks];
+  const filled = values.filter((v) => v.trim() !== "");
+  if (filled.length === 0) return null;
+  if (filled.length !== 3) {
+    return `${row.name || "This subject"}: provide CT1, CT2, and Semester Final together, or leave all three blank`;
+  }
+  const sum = values.reduce((total, v) => total + (parseInt(v, 10) || 0), 0);
+  if (sum !== row.fullMarks) {
+    return `${row.name || "This subject"}: CT1 + CT2 + Semester Final (${sum}) must add up to the full marks (${row.fullMarks})`;
+  }
+  return null;
 }
 
 // One modal for everything a class needs editing — weights, sections, and
@@ -214,13 +237,24 @@ function EditClassDialog({
   useEffect(() => {
     if (classItem && subjectsQuery.data && seededSubjectsForClassId.current !== classItem.id) {
       setSubjects(
-        subjectsQuery.data.map((s: SubjectDto) => ({
-          id: s.id,
-          subjectId: s.subjectId,
-          name: s.name,
-          fullMarks: s.fullMarks,
-          originalFullMarks: s.fullMarks,
-        })),
+        subjectsQuery.data.map((s: SubjectDto) => {
+          const ct1 = s.ct1FullMarks != null ? String(s.ct1FullMarks) : "";
+          const ct2 = s.ct2FullMarks != null ? String(s.ct2FullMarks) : "";
+          const semesterFinal = s.semesterFinalFullMarks != null ? String(s.semesterFinalFullMarks) : "";
+          return {
+            id: s.id,
+            subjectId: s.subjectId,
+            name: s.name,
+            fullMarks: s.fullMarks,
+            originalFullMarks: s.fullMarks,
+            ct1FullMarks: ct1,
+            ct2FullMarks: ct2,
+            semesterFinalFullMarks: semesterFinal,
+            originalCt1FullMarks: ct1,
+            originalCt2FullMarks: ct2,
+            originalSemesterFinalFullMarks: semesterFinal,
+          };
+        }),
       );
       seededSubjectsForClassId.current = classItem.id;
     }
@@ -317,19 +351,49 @@ function EditClassDialog({
     }
     for (const subject of subjects) {
       if (subject.id) {
-        if (subject.fullMarks !== subject.originalFullMarks) {
+        const splitChanged =
+          subject.ct1FullMarks !== subject.originalCt1FullMarks ||
+          subject.ct2FullMarks !== subject.originalCt2FullMarks ||
+          subject.semesterFinalFullMarks !== subject.originalSemesterFinalFullMarks;
+        if (subject.fullMarks !== subject.originalFullMarks || splitChanged) {
+          const splitError = progressReportSplitError(subject);
+          if (splitError) {
+            errors.push(splitError);
+            continue;
+          }
           try {
-            await updateSubject(subject.id, { fullMarks: subject.fullMarks });
+            await updateSubject(subject.id, {
+              fullMarks: subject.fullMarks,
+              ct1FullMarks: subject.ct1FullMarks.trim() === "" ? null : parseInt(subject.ct1FullMarks, 10),
+              ct2FullMarks: subject.ct2FullMarks.trim() === "" ? null : parseInt(subject.ct2FullMarks, 10),
+              semesterFinalFullMarks:
+                subject.semesterFinalFullMarks.trim() === ""
+                  ? null
+                  : parseInt(subject.semesterFinalFullMarks, 10),
+            });
           } catch (error) {
             errors.push(errorMessage(error, `Couldn't update subject "${subject.name}"`));
           }
         }
       } else if (subject.subjectId !== "") {
+        const splitError = progressReportSplitError(subject);
+        if (splitError) {
+          errors.push(splitError);
+          continue;
+        }
+        const hasSplit = subject.ct1FullMarks.trim() !== "";
         try {
           await createSubject({
             subjectId: subject.subjectId,
             classId: classItem.id,
             fullMarks: subject.fullMarks || 100,
+            ...(hasSplit
+              ? {
+                  ct1FullMarks: parseInt(subject.ct1FullMarks, 10),
+                  ct2FullMarks: parseInt(subject.ct2FullMarks, 10),
+                  semesterFinalFullMarks: parseInt(subject.semesterFinalFullMarks, 10),
+                }
+              : {}),
           });
         } catch (error) {
           errors.push(errorMessage(error, `Couldn't add subject "${subject.name}"`));
@@ -490,6 +554,47 @@ function EditClassDialog({
                     }
                     title="Full marks"
                   />
+                  <input
+                    type="number"
+                    min={0}
+                    className="component-marks-input"
+                    placeholder="CT1"
+                    value={subject.ct1FullMarks}
+                    onChange={(e) =>
+                      setSubjects((prev) =>
+                        prev.map((s, i) => (i === index ? { ...s, ct1FullMarks: e.target.value } : s)),
+                      )
+                    }
+                    title="CT1 full marks (progress report)"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    className="component-marks-input"
+                    placeholder="CT2"
+                    value={subject.ct2FullMarks}
+                    onChange={(e) =>
+                      setSubjects((prev) =>
+                        prev.map((s, i) => (i === index ? { ...s, ct2FullMarks: e.target.value } : s)),
+                      )
+                    }
+                    title="CT2 full marks (progress report)"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    className="component-marks-input"
+                    placeholder="Final"
+                    value={subject.semesterFinalFullMarks}
+                    onChange={(e) =>
+                      setSubjects((prev) =>
+                        prev.map((s, i) =>
+                          i === index ? { ...s, semesterFinalFullMarks: e.target.value } : s,
+                        ),
+                      )
+                    }
+                    title="Semester Final full marks (progress report)"
+                  />
                   <Button
                     type="button"
                     size="icon"
@@ -502,6 +607,11 @@ function EditClassDialog({
                 </div>
               );
             })}
+            <p className="muted-cell" style={{ fontSize: 12, margin: "0 0 8px" }}>
+              CT1/CT2/Final (optional) split a subject's full marks into the progress report's three
+              components — fill in all three (they must add up to Full Marks) to enable the Progress
+              Report for that subject, or leave them blank.
+            </p>
             {catalogQuery.data?.length === 0 && (
               <p className="muted-cell" style={{ fontSize: 12 }}>
                 No subjects in the catalog yet — add one from the Subjects page first.
@@ -511,7 +621,19 @@ function EditClassDialog({
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => setSubjects((prev) => [...prev, { subjectId: "", name: "", fullMarks: 100 }])}
+              onClick={() =>
+                setSubjects((prev) => [
+                  ...prev,
+                  {
+                    subjectId: "",
+                    name: "",
+                    fullMarks: 100,
+                    ct1FullMarks: "",
+                    ct2FullMarks: "",
+                    semesterFinalFullMarks: "",
+                  },
+                ])
+              }
             >
               <Plus size={14} />
               Add subject

@@ -2,12 +2,20 @@ import { apiDelete, apiGet, apiPost, apiPut } from "@/lib/api";
 
 export type ExamType = "tutorial" | "final";
 
+// Which progress-report component an exam is (CT1/CT2/Semester Final), or
+// undefined for every other exam (Midterm, the TUTORIAL/FINAL combined
+// semester-result exams, etc.) — unrelated to ExamType above.
+export type ExamComponent = "ct1" | "ct2" | "semester_final";
+
 export interface SubjectDto {
   id: number;
   name: string;
   classId: number;
   subjectId: number;
   fullMarks: number;
+  ct1FullMarks: number | null;
+  ct2FullMarks: number | null;
+  semesterFinalFullMarks: number | null;
 }
 
 export interface ExamDto {
@@ -21,6 +29,9 @@ export interface ExamDto {
   publishedAt: string | null;
   emailedCount: number;
   resultsAnnouncedAt: string | null;
+  component: ExamComponent | null;
+  attendancePeriodFrom: string | null;
+  attendancePeriodTo: string | null;
   createdAt: string;
   classEntity: { id: number; level: number | null; name: string };
   section: { id: number; name: string } | null;
@@ -90,11 +101,26 @@ export function fetchAllClassSubjects() {
   return apiGet<ClassSubjectDto[]>("/subjects/all");
 }
 
-export function createSubject(input: { subjectId: number; classId: number; fullMarks?: number }) {
+export function createSubject(input: {
+  subjectId: number;
+  classId: number;
+  fullMarks?: number;
+  ct1FullMarks?: number;
+  ct2FullMarks?: number;
+  semesterFinalFullMarks?: number;
+}) {
   return apiPost<SubjectDto>("/subjects", input);
 }
 
-export function updateSubject(subjectId: number, input: { fullMarks: number }) {
+export function updateSubject(
+  subjectId: number,
+  input: {
+    fullMarks: number;
+    ct1FullMarks?: number | null;
+    ct2FullMarks?: number | null;
+    semesterFinalFullMarks?: number | null;
+  },
+) {
   return apiPut<SubjectDto>(`/subjects/${subjectId}`, input);
 }
 
@@ -109,6 +135,9 @@ export function createExam(input: {
   sectionId?: number | undefined;
   examDate?: string | undefined;
   academicYear?: string | undefined;
+  component?: ExamComponent | undefined;
+  attendancePeriodFrom?: string | undefined;
+  attendancePeriodTo?: string | undefined;
 }) {
   return apiPost<ExamDto>("/exams", input);
 }
@@ -121,6 +150,9 @@ export function updateExam(
     sectionId?: number | null | undefined;
     examDate?: string | undefined;
     academicYear?: string | undefined;
+    component?: ExamComponent | null | undefined;
+    attendancePeriodFrom?: string | null | undefined;
+    attendancePeriodTo?: string | null | undefined;
   },
 ) {
   return apiPut<ExamDto>(`/exams/${examId}`, input);
@@ -212,5 +244,44 @@ export interface CombinedStudentResultDto {
 export function fetchSemesterResult(classId: number, studentId: number, academicYear: string) {
   return apiGet<CombinedStudentResultDto>(
     `/classes/${classId}/students/${studentId}/semester-result?academicYear=${encodeURIComponent(academicYear)}`,
+  );
+}
+
+export interface ProgressReportSubjectDto {
+  subjectId: number;
+  subjectName: string;
+  fullMarks: number;
+  ct1Marks: number | null;
+  ct2Marks: number | null;
+  semesterFinalMarks: number | null;
+  totalMarks: number;
+  highestMarks: number;
+  gradePoint: number;
+  letterGrade: string;
+}
+
+export interface ProgressReportDto {
+  studentId: number;
+  studentName: string;
+  studentCode: string;
+  roll: number;
+  className: string;
+  sectionName: string;
+  academicYear: string;
+  examTitle: string;
+  subjects: ProgressReportSubjectDto[];
+  totalFullMarks: number;
+  totalObtained: number;
+  gpa: number;
+  letterGrade: string;
+  position: number;
+  totalStudents: number;
+  totalWorkingDays: number | null;
+  totalAttendances: number | null;
+}
+
+export function fetchProgressReport(classId: number, studentId: number, academicYear: string) {
+  return apiGet<ProgressReportDto>(
+    `/classes/${classId}/students/${studentId}/progress-report?academicYear=${encodeURIComponent(academicYear)}`,
   );
 }
