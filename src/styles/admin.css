@@ -166,7 +166,22 @@
 /* Exam Fee admit card: same fillable-form fields as the receipt, plus a
    photo box (top-right, like a real admit card) and signature lines
    instead of a cut line. */
-.admit-card { border: 1px solid var(--foreground); border-radius: 4px; padding: 16px 20px 20px; color: var(--foreground); }
+.admit-card { position: relative; overflow: hidden; border: 1px solid var(--foreground); border-radius: 4px; padding: 16px 20px 20px; color: var(--foreground); }
+/* Full-color logo watermark behind the fields — low opacity (not grayscale)
+   so it stays colorful rather than reading as a faded photocopy stamp.
+   A pseudo-element (not an <img>) so it never captures clicks or shows up
+   in the tab order, and every direct child is lifted above it via z-index. */
+.admit-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/logo.jpeg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 60%;
+  opacity: 0.16;
+}
+.admit-card > * { position: relative; z-index: 1; }
 /* Photo + header sit side by side in a flex row (not absolutely positioned
    over the header text) — min-width: 0 on the header lets a long school
    name wrap inside its own column instead of overflowing into the photo. */

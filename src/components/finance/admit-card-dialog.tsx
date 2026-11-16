@@ -4,17 +4,11 @@ import { toast } from "sonner";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { SCHOOL_NAME } from "@/lib/school-info";
+import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
 import { fetchSchoolProfile } from "@/lib/website-api";
 import { studentPhotoUrl, type StudentDto } from "@/lib/students-api";
 import { downloadAdmitCardPdf } from "@/lib/admit-card-pdf";
 import type { StudentFeeDto } from "@/lib/finance-api";
-
-function fatherOrGuardianName(student: StudentDto): string {
-  const father = student.guardians.find((g) => g.relation === "father");
-  const any = father ?? student.guardians[0];
-  return any?.name ?? "—";
-}
 
 export function AdmitCardDialog({
   fee,
@@ -70,23 +64,17 @@ export function AdmitCardDialog({
             </div>
             <div className="receipt-row">
               <div className="receipt-field">
-                <span className="receipt-label">Student ID</span>
-                <span className="receipt-value mono">{student.code}</span>
-              </div>
-              <div className="receipt-field">
                 <span className="receipt-label">Roll No</span>
                 <span className="receipt-value mono">{student.roll}</span>
               </div>
-            </div>
-            <div className="receipt-field">
-              <span className="receipt-label">Class</span>
-              <span className="receipt-value">
-                {student.classEntity.name} · {student.section.name}
-              </span>
-            </div>
-            <div className="receipt-field">
-              <span className="receipt-label">Father&rsquo;s/Guardian&rsquo;s Name</span>
-              <span className="receipt-value">{fatherOrGuardianName(student)}</span>
+              <div className="receipt-field">
+                <span className="receipt-label">Class</span>
+                <span className="receipt-value">{student.classEntity.name}</span>
+              </div>
+              <div className="receipt-field">
+                <span className="receipt-label">Section</span>
+                <span className="receipt-value">{student.section.name}</span>
+              </div>
             </div>
 
             <p className="admit-card-declaration">

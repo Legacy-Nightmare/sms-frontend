@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { SCHOOL_NAME } from "@/lib/school-info";
+import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
 import type { StudentFeeDto } from "@/lib/finance-api";
 import type { StudentDto } from "@/lib/students-api";
 
@@ -23,12 +23,6 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
   }
 }
 
-function fatherOrGuardianName(student: StudentDto): string {
-  const father = student.guardians.find((g) => g.relation === "father");
-  const any = father ?? student.guardians[0];
-  return any?.name ?? "—";
-}
-
 export async function downloadAdmitCardPdf(
   fee: StudentFeeDto,
   student: StudentDto,
@@ -43,6 +37,32 @@ export async function downloadAdmitCardPdf(
   doc.setDrawColor(0);
   doc.setLineWidth(0.4);
   doc.roundedRect(left, cardTop, right - left, 190, 2, 2);
+
+  // Full-color logo watermark, centered behind the fields — low opacity
+  // (not grayscale) via jsPDF's graphics state, so it stays colorful rather
+  // than a faded monochrome stamp. Drawn right after the border so every
+  // later field/text draws on top of it.
+  const logoDataUrl = await loadImageAsDataUrl(SCHOOL_LOGO);
+  if (logoDataUrl) {
+    const cardW = right - left;
+    const cardH = 190;
+    const wmSize = cardW * 0.65;
+    try {
+      doc.saveGraphicsState();
+      doc.setGState(doc.GState({ opacity: 0.16 }));
+      doc.addImage(
+        logoDataUrl,
+        "JPEG",
+        left + (cardW - wmSize) / 2,
+        cardTop + (cardH - wmSize) / 2,
+        wmSize,
+        wmSize,
+      );
+      doc.restoreGraphicsState();
+    } catch {
+      // Unsupported format or corrupt data — card still works without it.
+    }
+  }
 
   // Photo, top-left — drawn first so the header text column's width (and
   // therefore its wrapping) is computed around it, never the other way
@@ -113,24 +133,30 @@ export async function downloadAdmitCardPdf(
   const lineGap = 9;
   const fieldWidth = right - left - 8;
 
-  function field(label: string, value: string) {
+  function field(label: string, value: string, x = left + 4, width = fieldWidth) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(9.5);
-    doc.text(label, left + 4, y);
+    doc.text(label, x, y);
     const labelWidth = doc.getTextWidth(label);
     doc.setFont("helvetica", "normal");
-    doc.text(value, left + 4 + labelWidth + 3, y);
+    doc.text(value, x + labelWidth + 3, y);
     doc.setDrawColor(40, 40, 40);
     doc.setLineWidth(0.2);
-    doc.line(left + 4 + labelWidth + 1, y + 1.3, left + 4 + fieldWidth, y + 1.3);
+    doc.line(x + labelWidth + 1, y + 1.3, x + width - 4, y + 1.3);
+  }
+
+  function fieldRow(entries: Array<[string, string]>) {
+    const colWidth = fieldWidth / entries.length;
+    entries.forEach(([label, value], i) => field(label, value, left + 4 + i * colWidth, colWidth));
     y += lineGap;
   }
 
-  field("Student's Name:", student.name);
-  field("Student ID:", student.code);
-  field("Roll No:", String(student.roll));
-  field("Class:", `${student.classEntity.name} · ${student.section.name}`);
-  field("Father's/Guardian's Name:", fatherOrGuardianName(student));
+  fieldRow([["Student's Name:", student.name]]);
+  fieldRow([
+    ["Roll No:", String(student.roll)],
+    ["Class:", student.classEntity.name],
+    ["Section:", student.section.name],
+  ]);
 
   y += 4;
   doc.setDrawColor(0);
