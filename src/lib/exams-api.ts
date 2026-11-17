@@ -32,6 +32,7 @@ export interface ExamDto {
   component: ExamComponent | null;
   attendancePeriodFrom: string | null;
   attendancePeriodTo: string | null;
+  issuesAdmitCard: boolean;
   createdAt: string;
   classEntity: { id: number; level: number | null; name: string };
   section: { id: number; name: string } | null;
@@ -138,6 +139,7 @@ export function createExam(input: {
   component?: ExamComponent | undefined;
   attendancePeriodFrom?: string | undefined;
   attendancePeriodTo?: string | undefined;
+  issuesAdmitCard?: boolean | undefined;
 }) {
   return apiPost<ExamDto>("/exams", input);
 }
@@ -153,6 +155,7 @@ export function updateExam(
     component?: ExamComponent | null | undefined;
     attendancePeriodFrom?: string | null | undefined;
     attendancePeriodTo?: string | null | undefined;
+    issuesAdmitCard?: boolean | undefined;
   },
 ) {
   return apiPut<ExamDto>(`/exams/${examId}`, input);

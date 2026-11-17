@@ -93,6 +93,7 @@ function CreateExamDialog() {
   const [component, setComponent] = useState<ExamComponent | "">("");
   const [attendancePeriodFrom, setAttendancePeriodFrom] = useState("");
   const [attendancePeriodTo, setAttendancePeriodTo] = useState("");
+  const [admitCardPromptExam, setAdmitCardPromptExam] = useState<ExamDto | null>(null);
 
   const sections = useQuery({
     queryKey: ["sections", classId],
@@ -115,7 +116,7 @@ function CreateExamDialog() {
         attendancePeriodTo:
           component === "semester_final" ? attendancePeriodTo || undefined : undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (exam) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
       toast.success(`${name} created`);
       setOpen(false);
@@ -130,12 +131,25 @@ function CreateExamDialog() {
       setComponent("");
       setAttendancePeriodFrom("");
       setAttendancePeriodTo("");
+      setAdmitCardPromptExam(exam);
     },
     onError: (error) =>
       toast.error(error instanceof ApiError ? error.message : "Couldn't create exam"),
   });
 
+  const setAdmitCard = useMutation({
+    mutationFn: (issuesAdmitCard: boolean) =>
+      updateExam(admitCardPromptExam!.id, { issuesAdmitCard }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exams"] });
+      setAdmitCardPromptExam(null);
+    },
+    onError: (error) =>
+      toast.error(error instanceof ApiError ? error.message : "Couldn't save admit card setting"),
+  });
+
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <Button onClick={() => setOpen(true)}>
         <Plus />
@@ -283,6 +297,31 @@ function CreateExamDialog() {
         </form>
       </DialogContent>
     </Dialog>
+    <Dialog open={!!admitCardPromptExam} onOpenChange={(v) => !v && setAdmitCardPromptExam(null)}>
+      <DialogContent style={{ maxWidth: 420 }}>
+        <DialogHeader>
+          <DialogTitle>Issue admit card for &quot;{admitCardPromptExam?.name}&quot;?</DialogTitle>
+        </DialogHeader>
+        <p className="muted-cell" style={{ fontSize: 13, margin: 0 }}>
+          Only exams marked yes can be linked to an Exam Fee bill for downloading an admit card —
+          not every exam (e.g. a class test) needs one.
+        </p>
+        <div className="drawer-actions">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={setAdmitCard.isPending}
+            onClick={() => setAdmitCard.mutate(false)}
+          >
+            No
+          </Button>
+          <Button type="button" disabled={setAdmitCard.isPending} onClick={() => setAdmitCard.mutate(true)}>
+            {setAdmitCard.isPending ? "Saving…" : "Yes"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
@@ -306,6 +345,7 @@ function EditExamDialog({
   const [component, setComponent] = useState<ExamComponent | "">("");
   const [attendancePeriodFrom, setAttendancePeriodFrom] = useState("");
   const [attendancePeriodTo, setAttendancePeriodTo] = useState("");
+  const [issuesAdmitCard, setIssuesAdmitCard] = useState(false);
 
   const sections = useQuery({
     queryKey: ["sections", exam?.classId],
@@ -335,6 +375,7 @@ function EditExamDialog({
       setComponent(exam.component ?? "");
       setAttendancePeriodFrom(exam.attendancePeriodFrom ?? "");
       setAttendancePeriodTo(exam.attendancePeriodTo ?? "");
+      setIssuesAdmitCard(exam.issuesAdmitCard);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exam?.id]);
@@ -352,6 +393,7 @@ function EditExamDialog({
         attendancePeriodFrom:
           component === "semester_final" ? attendancePeriodFrom || null : null,
         attendancePeriodTo: component === "semester_final" ? attendancePeriodTo || null : null,
+        issuesAdmitCard,
       });
     },
     onSuccess: () => {
@@ -474,6 +516,14 @@ function EditExamDialog({
                 </label>
               </div>
             )}
+            <label style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={issuesAdmitCard}
+                onChange={(e) => setIssuesAdmitCard(e.target.checked)}
+              />
+              Issues admit card
+            </label>
             <div className="drawer-actions">
               <DialogClose asChild>
                 <Button type="button" variant="outline">
