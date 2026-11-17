@@ -158,6 +158,25 @@ export async function downloadProgressReportPdf(
   // it, a class/roll chip on the far right.
   const logoSize = 20;
   const logoDataUrl = await loadImageAsDataUrl(SCHOOL_LOGO);
+
+  // Full-color logo watermark, centered over where the subject table sits
+  // (not the whole page — the header and colored stat boxes above it are
+  // solid-filled, so a watermark there would just be hidden) — drawn
+  // first, low opacity via jsPDF's graphics state (not grayscale), same
+  // approach as the admit card.
+  if (logoDataUrl) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const wmSize = 95;
+    try {
+      doc.saveGraphicsState();
+      doc.setGState(doc.GState({ opacity: 0.08 }));
+      doc.addImage(logoDataUrl, "JPEG", (pageWidth - wmSize) / 2, 98, wmSize, wmSize);
+      doc.restoreGraphicsState();
+    } catch {
+      // Unsupported format — rest of the page still renders without it.
+    }
+  }
+
   const chipLabel = `Class: ${report.className} - Roll: ${report.roll}`;
   const chipWidth = doc.getTextWidth(chipLabel) + 10;
   if (logoDataUrl) {

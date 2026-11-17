@@ -205,6 +205,23 @@
    per the reference design: colored summary cards, pill badges, a wide
    subject table. */
 .progress-report { display: grid; gap: 18px; }
+/* School logo watermark on the table card — the one large, plain-white
+   area, so it reads clearly instead of being half-hidden behind the
+   colored info/stat cards. Full color (not grayscale), very low opacity,
+   same approach as the admit card. */
+.pr-table-card { position: relative; }
+.pr-table-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/logo.jpeg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 50%;
+  opacity: 0.08;
+  pointer-events: none;
+}
+.pr-table-card > * { position: relative; z-index: 1; }
 .pr-header { display: flex; align-items: flex-start; gap: 14px; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
 .pr-logo { width: 46px; height: 46px; border-radius: 999px; object-fit: cover; }
 .pr-header-text { flex: 1; min-width: 0; }

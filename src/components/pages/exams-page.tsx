@@ -33,7 +33,6 @@ import {
 import { Badge, DataTable, EmptyRow, PageHeading, Panel } from "@/components/dashboard-ui";
 import { AddSubjectDialog } from "@/components/add-subject-dialog";
 import { StudentAvatar } from "@/components/student-avatar";
-import { StudentMarksheetDialog } from "@/components/student-marksheet-dialog";
 import { ProgressReportDialog } from "@/components/progress-report-dialog";
 import { DateInput } from "@/components/ui/date-input";
 import { fetchClasses, fetchSections } from "@/lib/academics-api";
@@ -1129,27 +1128,8 @@ export function ExamsPage() {
                     />
                     {r.hasGuardianEmail ? "Sent" : "Pending"}
                   </td>
-                  <td style={{ display: "flex", gap: 6 }}>
-                    {selectedExam.academicYear ? (
-                      <StudentMarksheetDialog
-                        classId={selectedExam.classId}
-                        studentId={r.studentId}
-                        academicYear={selectedExam.academicYear}
-                        trigger={
-                          <Button size="sm" variant="outline">
-                            Marksheet
-                          </Button>
-                        }
-                      />
-                    ) : (
-                      <span
-                        className="muted-cell"
-                        title="Set an academic year on this exam to view a marksheet"
-                      >
-                        —
-                      </span>
-                    )}
-                    {selectedExam.component === "semester_final" && selectedExam.academicYear && (
+                  <td>
+                    {selectedExam.component === "semester_final" && selectedExam.academicYear ? (
                       <ProgressReportDialog
                         classId={selectedExam.classId}
                         studentId={r.studentId}
@@ -1160,6 +1140,13 @@ export function ExamsPage() {
                           </Button>
                         }
                       />
+                    ) : (
+                      <span
+                        className="muted-cell"
+                        title="Only available for a Semester Final exam with an academic year set"
+                      >
+                        —
+                      </span>
                     )}
                   </td>
                 </tr>
