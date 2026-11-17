@@ -700,7 +700,11 @@ function MarksEntryGrid({
     },
     onSuccess: (res) => {
       setRowErrors({});
-      queryClient.invalidateQueries({ queryKey: ["marks-sheet", examId, subjectId, sectionId] });
+      // Must match the useQuery key exactly (effectiveSectionId, not the
+      // raw sectionId state) or this invalidation silently matches nothing
+      // — the cached sheet stays stale, so isDirty keeps comparing fresh
+      // values against pre-save data and never clears.
+      queryClient.invalidateQueries({ queryKey: ["marks-sheet", examId, subjectId, effectiveSectionId] });
       queryClient.invalidateQueries({ queryKey: ["exam-results", examId] });
       toast.success(`Saved ${res.saved} mark${res.saved === 1 ? "" : "s"}`);
     },
