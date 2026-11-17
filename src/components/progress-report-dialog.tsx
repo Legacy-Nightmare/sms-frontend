@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/dashboard-ui";
 import { Dialog, DialogClose, DialogContent } from "@/components/ui/dialog";
 import { fetchProgressReport } from "@/lib/exams-api";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
@@ -15,14 +16,24 @@ import { ApiError } from "@/lib/api";
 // second source of truth (the actual per-subject grades come from the
 // fetched report, already computed server-side with this same scale).
 const GRADE_SCALE = [
-  { range: "80-100", grade: "A+", gpa: "5.00" },
-  { range: "70-79", grade: "A", gpa: "4.00" },
-  { range: "60-69", grade: "A-", gpa: "3.50" },
-  { range: "50-59", grade: "B", gpa: "3.00" },
-  { range: "40-49", grade: "C", gpa: "2.00" },
-  { range: "33-39", grade: "D", gpa: "1.00" },
-  { range: "0-32", grade: "F", gpa: "0.00" },
+  { range: "80-100", grade: "A+", gpa: "5.0" },
+  { range: "70-79", grade: "A", gpa: "4.0" },
+  { range: "60-69", grade: "A-", gpa: "3.5" },
+  { range: "50-59", grade: "B", gpa: "3.0" },
+  { range: "40-49", grade: "C", gpa: "2.0" },
+  { range: "33-39", grade: "D", gpa: "1.0" },
+  { range: "0-32", grade: "F", gpa: "0.0" },
 ];
+
+const GRADE_BADGE_TONE: Record<string, string> = {
+  "A+": "green",
+  A: "teal",
+  "A-": "purple",
+  B: "amber",
+  C: "amber",
+  D: "red",
+  F: "red",
+};
 
 function ordinal(n: number): string {
   const mod100 = n % 100;
@@ -39,14 +50,20 @@ function ordinal(n: number): string {
   }
 }
 
-// A simple, display-only remark derived from the overall GPA — not stored
-// anywhere, just a reasonable default the printed card always shows one of.
+// Display-only, derived from the overall grade/GPA — not stored anywhere.
 function remarkForGpa(gpa: number): string {
-  if (gpa >= 4.5) return "Excellent";
+  if (gpa >= 4.5) return "Excellent (Outstanding)";
   if (gpa >= 3.5) return "Very Good";
   if (gpa >= 3.0) return "Good";
   if (gpa >= 2.0) return "Average";
   return "Needs Improvement";
+}
+
+function resultStatus(letterGrade: string, gpa: number): string {
+  if (letterGrade === "F") return "Failed";
+  if (gpa >= 4.5) return "Passed with Honors";
+  if (gpa >= 3.5) return "Passed with Distinction";
+  return "Passed";
 }
 
 export function ProgressReportDialog({
@@ -82,145 +99,188 @@ export function ProgressReportDialog({
     }
   };
 
+  const data = report.data;
+  const passed = data ? data.letterGrade !== "F" : false;
+  const attendancePct =
+    data && data.totalWorkingDays && data.totalWorkingDays > 0
+      ? Math.round(((data.totalAttendances ?? 0) / data.totalWorkingDays) * 100)
+      : null;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <span onClick={() => setOpen(true)}>{trigger}</span>
-      <DialogContent className="print-dialog" style={{ maxWidth: 760 }}>
+      <DialogContent style={{ maxWidth: 960 }}>
         {report.isLoading && <p>Loading…</p>}
         {report.error && (
           <p style={{ color: "var(--red)" }}>
             {report.error instanceof ApiError ? report.error.message : "Couldn't load progress report"}
           </p>
         )}
-        {report.data && (
+        {data && (
           <>
-            <div className="print-area">
-              <div className="print-letterhead" style={{ justifyContent: "center", textAlign: "center" }}>
-                <img src={SCHOOL_LOGO} alt="" />
-                <div>
-                  <h2>{SCHOOL_NAME}</h2>
-                  {profile.data?.address && <p>{profile.data.address}</p>}
-                  <p style={{ fontWeight: 600 }}>{report.data.examTitle}</p>
+            <div className="progress-report">
+              <div className="pr-header">
+                <img src={SCHOOL_LOGO} alt="" className="pr-logo" />
+                <div className="pr-header-text">
+                  <div className="pr-header-title-row">
+                    <h2>{SCHOOL_NAME}</h2>
+                    <Badge tone="green">Official Marksheet</Badge>
+                  </div>
+                  <p>
+                    {profile.data?.address && `${profile.data.address} • `}
+                    {data.examTitle}
+                  </p>
+                </div>
+                <span className="pr-chip">
+                  Class: {data.className} • Roll: {data.roll}
+                </span>
+              </div>
+
+              <div className="pr-top-grid">
+                <div className="pr-info-card">
+                  <p className="pr-section-label">Student Information</p>
+                  <div className="pr-info-grid">
+                    <div>
+                      <span className="pr-info-label">Student Name</span>
+                      <strong>{data.studentName}</strong>
+                    </div>
+                    <div>
+                      <span className="pr-info-label">Class &amp; Roll</span>
+                      <strong>
+                        {data.className} (Roll: {String(data.roll).padStart(2, "0")})
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="pr-info-label">Academic Term</span>
+                      <strong>{data.examTitle}</strong>
+                    </div>
+                    <div>
+                      <span className="pr-info-label">Working Days / Present</span>
+                      <strong>
+                        {data.totalWorkingDays ?? "—"} / {data.totalAttendances ?? "—"} Days
+                        {attendancePct !== null && <span className="pr-muted"> ({attendancePct}%)</span>}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="pr-info-label">Result Status</span>
+                      <strong className={passed ? "pr-pass" : "pr-fail"}>
+                        {resultStatus(data.letterGrade, data.gpa)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="pr-info-label">Teacher&rsquo;s Remarks</span>
+                      <Badge tone="green">{remarkForGpa(data.gpa)}</Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pr-stat-card pr-stat-green">
+                  <div className="pr-stat-top">
+                    <span>Grade Point</span>
+                    <Badge tone={passed ? "green" : "red"}>{passed ? "Passed" : "Failed"}</Badge>
+                  </div>
+                  <div className="pr-stat-value">
+                    {data.gpa.toFixed(2)}
+                    <span>/5.00</span>
+                  </div>
+                  <p>Letter Grade: {data.letterGrade}</p>
+                </div>
+
+                <div className="pr-stat-card pr-stat-orange">
+                  <div className="pr-stat-top">
+                    <span>Merit Position</span> ★
+                  </div>
+                  <div className="pr-stat-value">
+                    {ordinal(data.position)}
+                    <span>Position</span>
+                  </div>
+                  <p>
+                    {data.position === 1
+                      ? `Top of ${data.className}`
+                      : `Out of ${data.totalStudents} in ${data.className}`}
+                  </p>
                 </div>
               </div>
 
-              <h3 style={{ textAlign: "center", border: "1px solid var(--foreground)", display: "inline-block", padding: "4px 24px", margin: "0 auto 14px", fontSize: 15 }}>
-                Progress Report
-              </h3>
-
-              <table className="print-doc-table" style={{ marginBottom: 10 }}>
-                <tbody>
-                  <tr>
-                    <th style={{ width: "20%" }}>Student&rsquo;s Name</th>
-                    <td>{report.data.studentName}</td>
-                    <th style={{ width: "15%" }}>Class</th>
-                    <td>{report.data.className}</td>
-                    <th style={{ width: "15%" }}>Roll No</th>
-                    <td className="mono">{report.data.roll}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <table className="print-doc-table" style={{ marginBottom: 14, fontSize: 11, maxWidth: 320, marginLeft: "auto" }}>
-                <thead>
-                  <tr>
-                    <th>Mark</th>
-                    <th>Grade</th>
-                    <th>GPA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {GRADE_SCALE.map((g) => (
-                    <tr key={g.grade}>
-                      <td className="mono">{g.range}</td>
-                      <td>{g.grade}</td>
-                      <td className="mono">{g.gpa}</td>
+              <div className="pr-table-card">
+                <div className="pr-table-header">
+                  <p className="pr-section-label">Subject Breakdown &amp; Evaluation</p>
+                  <div className="pr-legend">
+                    <span className="pr-legend-chip">T1 = Tutorial 1 • T2 = Tutorial 2</span>
+                    <span className="pr-legend-label">Grading scale:</span>
+                    {GRADE_SCALE.map((g) => (
+                      <span className="pr-legend-chip" key={g.grade}>
+                        {g.range}: <strong>{g.grade}</strong> ({g.gpa})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <table className="pr-table">
+                  <thead>
+                    <tr>
+                      <th>Subject Name</th>
+                      <th>Full Marks</th>
+                      <th>T1</th>
+                      <th>T2</th>
+                      <th>1st Semester</th>
+                      <th>Total Marks</th>
+                      <th>Highest</th>
+                      <th>Grade Point</th>
+                      <th>Letter Grade</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <table className="print-doc-table">
-                <thead>
-                  <tr>
-                    <th>Subject Name</th>
-                    <th>Full Marks</th>
-                    <th>T1</th>
-                    <th>T2</th>
-                    <th>1st Semester</th>
-                    <th>Total Marks</th>
-                    <th>Highest Marks</th>
-                    <th>Grade Point</th>
-                    <th>Letter Grade</th>
-                    <th>GPA</th>
-                    <th>Position</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.data.subjects.map((s, i) => (
-                    <tr key={s.subjectId}>
-                      <td>{s.subjectName}</td>
-                      <td className="mono">{s.fullMarks}</td>
-                      <td className="mono">{s.ct1Marks ?? "—"}</td>
-                      <td className="mono">{s.ct2Marks ?? "—"}</td>
-                      <td className="mono">{s.semesterFinalMarks ?? "—"}</td>
-                      <td className="mono strong">{s.totalMarks}</td>
-                      <td className="mono">{s.highestMarks}</td>
-                      <td className="mono">{s.gradePoint.toFixed(2)}</td>
-                      <td>{s.letterGrade}</td>
-                      {i === 0 && (
-                        <td className="mono strong" rowSpan={report.data.subjects.length}>
-                          {report.data.gpa.toFixed(2)}
+                  </thead>
+                  <tbody>
+                    {data.subjects.map((s) => (
+                      <tr key={s.subjectId}>
+                        <td>{s.subjectName}</td>
+                        <td className="mono">{s.fullMarks}</td>
+                        <td className="mono">{s.ct1Marks ?? "—"}</td>
+                        <td className="mono">{s.ct2Marks ?? "—"}</td>
+                        <td className="mono">{s.semesterFinalMarks ?? "—"}</td>
+                        <td className="mono strong pr-total-cell">{s.totalMarks}</td>
+                        <td className="mono pr-muted">{s.highestMarks}</td>
+                        <td className="mono strong">{s.gradePoint.toFixed(2)}</td>
+                        <td>
+                          <Badge tone={GRADE_BADGE_TONE[s.letterGrade] ?? "neutral"}>{s.letterGrade}</Badge>
                         </td>
-                      )}
-                      {i === 0 && (
-                        <td className="strong" rowSpan={report.data.subjects.length}>
-                          {ordinal(report.data.position)}
-                        </td>
-                      )}
+                      </tr>
+                    ))}
+                    <tr className="pr-total-row">
+                      <th>Grand Total Summary</th>
+                      <td className="mono strong">{data.totalFullMarks}</td>
+                      <td />
+                      <td />
+                      <td className="pr-total-label">Total Obtained Marks:</td>
+                      <td className="mono strong pr-total-cell">{data.totalObtained}</td>
+                      <td className="pr-total-label">Overall Term GPA:</td>
+                      <td className="mono strong pr-total-cell" colSpan={2}>
+                        {data.gpa.toFixed(2)} ({data.letterGrade})
+                      </td>
                     </tr>
-                  ))}
-                  <tr>
-                    <th>Total Marks</th>
-                    <td className="mono strong">{report.data.totalFullMarks}</td>
-                    <td />
-                    <td />
-                    <td />
-                    <td className="mono strong">{report.data.totalObtained}</td>
-                    <td colSpan={4} />
-                  </tr>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
 
-              <table className="print-doc-table" style={{ marginTop: 14 }}>
-                <tbody>
-                  <tr>
-                    <th style={{ width: "25%" }}>Total Working Days</th>
-                    <td className="mono">{report.data.totalWorkingDays ?? "—"}</td>
-                    <th style={{ width: "25%" }}>Total Attendances</th>
-                    <td className="mono">{report.data.totalAttendances ?? "—"}</td>
-                  </tr>
-                  <tr>
-                    <th>Remarks</th>
-                    <td colSpan={3}>{remarkForGpa(report.data.gpa)}</td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="pr-signatures">
+                <div className="pr-sig">
+                  <div className="pr-sig-line" />
+                  <span>Class Teacher&rsquo;s Signature</span>
+                </div>
+                <div className="pr-sig">
+                  <div className="pr-sig-line" />
+                  <span>Guardian&rsquo;s Signature</span>
+                </div>
+                <div className="pr-sig">
+                  <div className="pr-sig-line" />
+                  <span>Principal&rsquo;s Signature</span>
+                </div>
+              </div>
 
-              <div className="admit-card-signatures" style={{ marginTop: 50 }}>
-                <div>
-                  <div className="admit-card-signature-line" />
-                  Class Teacher&rsquo;s Signature
-                </div>
-                <div>
-                  <div className="admit-card-signature-line" />
-                  Guardian&rsquo;s Signature
-                </div>
-                <div>
-                  <div className="admit-card-signature-line" />
-                  Principal&rsquo;s Signature
-                  <p style={{ margin: "4px 0 0", fontSize: 11 }}>G.P.A: {report.data.gpa.toFixed(2)}</p>
-                </div>
+              <div className="pr-footer">
+                {/* Only reachable once the exam is published (gated by the caller). */}
+                <span className="pr-status-dot" />
+                Status: <strong>Published &amp; Verified</strong>
+                <span className="pr-muted"> | {SCHOOL_NAME} SMS</span>
               </div>
             </div>
 
