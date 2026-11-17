@@ -179,7 +179,7 @@ export async function downloadProgressReportPdf(
   const legendBottom = y + 5 * (GRADE_SCALE.length + 1);
 
   // Main subject table.
-  const subjectCols = [38, 16, 13, 13, 28, 22, 18, 18, 14, 14];
+  const subjectCols = [46, 14, 11, 11, 15, 16, 15, 13, 13, 12, 14];
   const headerRowHeight = 10;
   const dataRowHeight = 8;
   drawRow(
@@ -193,7 +193,8 @@ export async function downloadProgressReportPdf(
       "Full\nMarks",
       "T1",
       "T2",
-      "1st Semester\nTotal Marks",
+      "1st\nSemester",
+      "Total\nMarks",
       "Highest\nMarks",
       "Grade\nPoint",
       "Letter\nGrade",
@@ -215,6 +216,7 @@ export async function downloadProgressReportPdf(
         String(s.fullMarks),
         s.ct1Marks != null ? String(s.ct1Marks) : "—",
         s.ct2Marks != null ? String(s.ct2Marks) : "—",
+        s.semesterFinalMarks != null ? String(s.semesterFinalMarks) : "—",
         String(s.totalMarks),
         String(s.highestMarks),
         s.gradePoint.toFixed(2),
@@ -238,6 +240,7 @@ export async function downloadProgressReportPdf(
       String(report.totalFullMarks),
       "",
       "",
+      "",
       String(report.totalObtained),
       "",
       "",
@@ -253,7 +256,7 @@ export async function downloadProgressReportPdf(
   // Merge the GPA/Position columns visually (erase the inner horizontal
   // lines between subject rows in those two columns) so they read as one
   // spanning cell, same as the printed card.
-  const gpaColX = left + subjectCols.slice(0, 8).reduce((a, b) => a + b, 0);
+  const gpaColX = left + subjectCols.slice(0, 9).reduce((a, b) => a + b, 0);
   doc.setDrawColor(255, 255, 255);
   doc.setLineWidth(0.2);
   for (let i = 1; i < report.subjects.length; i++) {

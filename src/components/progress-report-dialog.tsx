@@ -147,7 +147,8 @@ export function ProgressReportDialog({
                     <th>Full Marks</th>
                     <th>T1</th>
                     <th>T2</th>
-                    <th>1st Semester Total Marks</th>
+                    <th>1st Semester</th>
+                    <th>Total Marks</th>
                     <th>Highest Marks</th>
                     <th>Grade Point</th>
                     <th>Letter Grade</th>
@@ -162,6 +163,7 @@ export function ProgressReportDialog({
                       <td className="mono">{s.fullMarks}</td>
                       <td className="mono">{s.ct1Marks ?? "—"}</td>
                       <td className="mono">{s.ct2Marks ?? "—"}</td>
+                      <td className="mono">{s.semesterFinalMarks ?? "—"}</td>
                       <td className="mono strong">{s.totalMarks}</td>
                       <td className="mono">{s.highestMarks}</td>
                       <td className="mono">{s.gradePoint.toFixed(2)}</td>
@@ -181,6 +183,7 @@ export function ProgressReportDialog({
                   <tr>
                     <th>Total Marks</th>
                     <td className="mono strong">{report.data.totalFullMarks}</td>
+                    <td />
                     <td />
                     <td />
                     <td className="mono strong">{report.data.totalObtained}</td>
