@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, formatDistanceToNow } from "date-fns";
 import {
@@ -14,11 +14,13 @@ import { BookOpen, CalendarCheck, GraduationCap, Megaphone, Users } from "lucide
 import { useAuth } from "@/lib/auth";
 import { fetchDashboardSummary, fetchAttendanceTrend } from "@/lib/dashboard-api";
 import { fetchRecentAttendance } from "@/lib/attendance-api";
-import { fetchNotices } from "@/lib/notices-api";
+import { fetchNotices, type NoticeDto } from "@/lib/notices-api";
 import { fetchClasses } from "@/lib/academics-api";
 import { fetchTeachers } from "@/lib/teachers-api";
 import { WelcomeBanner } from "@/components/welcome-banner";
 import { Badge, DataTable, EmptyRow, Panel } from "@/components/dashboard-ui";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const DONUT_COLORS = ["var(--teal)", "var(--blue)", "var(--purple)", "var(--orange)", "var(--pink)", "var(--lime)"];
 
@@ -42,6 +44,7 @@ function Sparkline({ data, color }: { data: Array<{ v: number }>; color: string 
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const [viewingNotice, setViewingNotice] = useState<NoticeDto | null>(null);
   const summary = useQuery({ queryKey: ["dashboard-summary"], queryFn: fetchDashboardSummary });
   const trend = useQuery({ queryKey: ["attendance-trend"], queryFn: fetchAttendanceTrend });
   const recent = useQuery({
@@ -295,7 +298,11 @@ export function DashboardPage() {
               </li>
             ))}
             {draftNotices.map((notice) => (
-              <li key={`notice-${notice.id}`}>
+              <li
+                key={`notice-${notice.id}`}
+                className="activity-list-clickable"
+                onClick={() => setViewingNotice(notice)}
+              >
                 <span className="activity-icon activity-icon-purple">
                   <Megaphone />
                 </span>
@@ -342,7 +349,11 @@ export function DashboardPage() {
           </div>
           <ul className="activity-list">
             {publishedNotices.slice(0, 5).map((notice) => (
-              <li key={notice.id}>
+              <li
+                key={notice.id}
+                className="activity-list-clickable"
+                onClick={() => setViewingNotice(notice)}
+              >
                 <span className="activity-icon activity-icon-teal">
                   <Megaphone />
                 </span>
@@ -361,6 +372,32 @@ export function DashboardPage() {
       <p className="dashboard-footer-tag">
         Learn <span /> Grow <span /> Build a Better Tomorrow
       </p>
+
+      <Dialog open={!!viewingNotice} onOpenChange={(v) => !v && setViewingNotice(null)}>
+        <DialogContent style={{ maxWidth: 520 }}>
+          <DialogHeader>
+            <DialogTitle>{viewingNotice?.title}</DialogTitle>
+          </DialogHeader>
+          {viewingNotice && (
+            <>
+              <p className="muted-cell" style={{ fontSize: 12, margin: "-8px 0 0" }}>
+                {viewingNotice.classEntity ? viewingNotice.classEntity.name : "All classes"}
+                {viewingNotice.publishedAt
+                  ? ` · Published ${formatDistanceToNow(new Date(viewingNotice.publishedAt), { addSuffix: true })}`
+                  : " · Draft"}
+              </p>
+              <p style={{ whiteSpace: "pre-wrap", fontSize: 14, margin: 0 }}>{viewingNotice.body}</p>
+              <div className="drawer-actions">
+                <DialogClose asChild>
+                  <Button type="button" variant="outline">
+                    Close
+                  </Button>
+                </DialogClose>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
