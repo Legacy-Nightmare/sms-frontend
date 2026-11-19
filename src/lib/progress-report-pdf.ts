@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
+import { BENGALI_FONT, registerBengaliFont } from "@/lib/pdf-fonts";
 import type { ProgressReportDto } from "@/lib/exams-api";
 
 // Bangladesh NCTB scale — must match backend/src/exams/grading.ts exactly;
@@ -129,12 +130,13 @@ function labelValue(
   label: string,
   value: string,
   color: [number, number, number] = [20, 20, 20],
+  font: "helvetica" | typeof BENGALI_FONT = "helvetica",
 ) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...MUTED);
   doc.text(label, x, y);
-  doc.setFont("helvetica", "bold");
+  doc.setFont(font, "bold");
   doc.setFontSize(10);
   doc.setTextColor(...color);
   doc.text(value, x, y + 5.5);
@@ -149,6 +151,7 @@ export async function downloadProgressReportPdf(
   address: string | null,
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "landscape" });
+  await registerBengaliFont(doc);
   const left = 15;
   const right = 282;
   const width = right - left;
@@ -229,7 +232,8 @@ export async function downloadProgressReportPdf(
   const col1 = left + 5;
   const col2 = left + infoBoxWidth / 3 + 3;
   const col3 = left + (2 * infoBoxWidth) / 3 + 1;
-  labelValue(doc, col1, y + 16, "Student Name", report.studentName);
+  // F-04: names may be Bangla — Helvetica can't render that script.
+  labelValue(doc, col1, y + 16, "Student Name", report.studentName, [20, 20, 20], BENGALI_FONT);
   labelValue(doc, col2, y + 16, "Class & Roll", `${report.className} (Roll ${String(report.roll).padStart(2, "0")})`);
   labelValue(doc, col3, y + 16, "Academic Term", report.examTitle);
   const attendancePct =
