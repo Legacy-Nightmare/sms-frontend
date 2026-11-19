@@ -16,6 +16,12 @@ COPY . .
 # CORS config is needed.
 ENV NITRO_PRESET=node-server
 ENV VITE_API_BASE_URL=/api
+# reCAPTCHA site key — public by design (meant to ship in frontend JS), so
+# baked in the same way as VITE_API_BASE_URL above, no secret needed. This
+# is Google's official always-pass TEST key; swap for a real one from
+# https://www.google.com/recaptcha/admin (paired with the backend's
+# RECAPTCHA_SECRET_KEY) before this matters for real traffic.
+ENV VITE_RECAPTCHA_SITE_KEY=6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI
 RUN npm run build
 
 # ---- runtime ----
