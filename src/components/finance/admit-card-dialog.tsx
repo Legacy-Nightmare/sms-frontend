@@ -74,6 +74,9 @@ export function AdmitCardDialog({
     setDownloading(true);
     try {
       const photoDataUrl = photoUrl ? await loadStudentPhotoDataUrl(student.id) : null;
+      if (photoUrl && !photoDataUrl) {
+        toast.warning("The photo could not be loaded; the card will print without it");
+      }
       await downloadAdmitCardPdf(admitCardData, profile.data?.phone, photoDataUrl);
     } catch {
       toast.error("Couldn't generate the admit card PDF");
