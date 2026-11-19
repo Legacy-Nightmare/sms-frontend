@@ -28,10 +28,14 @@ const REQUIRED_DOCUMENTS = [
 ];
 
 const FEE_TIERS = [
-  { tier: "Play / Nursery / KG", admission: "৳3,500", tuition: "৳800 / month", session: "৳2,000 / year" },
-  { tier: "Class 1 – 3", admission: "৳4,000", tuition: "৳1,000 / month", session: "৳2,500 / year" },
-  { tier: "Class 4 – 6", admission: "৳4,500", tuition: "৳1,200 / month", session: "৳3,000 / year" },
-  { tier: "Class 7 – 10", admission: "৳5,000", tuition: "৳1,500 / month", session: "৳3,500 / year" },
+  { tier: "Play / Nursery", admission: "৳1,000", tuition: "৳400 / month", session: "৳800 / year" },
+  { tier: "Class 1 – 2", admission: "৳1,000", tuition: "৳500 / month", session: "৳800 / year" },
+  { tier: "Class 3", admission: "৳1,000", tuition: "৳600 / month", session: "৳800 / year" },
+  { tier: "Class 4", admission: "৳1,200", tuition: "৳600 / month", session: "৳1,000 / year" },
+  { tier: "Class 5", admission: "৳1,200", tuition: "৳700 / month", session: "৳1,000 / year" },
+  { tier: "Class 6 – 7", admission: "৳1,200", tuition: "৳800 / month", session: "৳1,000 / year" },
+  { tier: "Class 8", admission: "৳1,500", tuition: "৳900 / month", session: "৳1,200 / year" },
+  { tier: "Class 9 – 10", admission: "৳1,500", tuition: "৳1,000 / month", session: "৳1,200 / year" },
 ];
 
 const IMPORTANT_DATES = [
