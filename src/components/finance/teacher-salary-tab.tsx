@@ -23,6 +23,7 @@ import {
 import { DateInput } from "@/components/ui/date-input";
 import { Badge, Panel } from "@/components/dashboard-ui";
 import { PrintableSheet } from "@/components/printable-sheet";
+import { SalaryReceiptDialog } from "./salary-receipt-dialog";
 import { ApiError } from "@/lib/api";
 import { exportStyledExcel } from "@/lib/excel-export";
 import { fetchTeachers, type TeacherDto } from "@/lib/teachers-api";
@@ -169,6 +170,7 @@ function SalaryDetailDialog({ id, onClose }: { id: number; onClose: () => void }
   const [method, setMethod] = useState<PaymentMethod>("bank");
   const [paidAt, setPaidAt] = useState(localDateString());
   const [note, setNote] = useState("");
+  const [receiptPaymentId, setReceiptPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
     if (d) setAmount(String(d.remaining));
@@ -292,6 +294,11 @@ function SalaryDetailDialog({ id, onClose }: { id: number; onClose: () => void }
                     ) : (
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <Badge tone="green">Completed</Badge>
+                        {p.receiptNumber && (
+                          <Button size="sm" variant="outline" onClick={() => setReceiptPaymentId(p.id)}>
+                            Receipt
+                          </Button>
+                        )}
                         <Button size="sm" variant="ghost" onClick={() => voidPayment.mutate(p.id)}>
                           Void
                         </Button>
@@ -360,6 +367,18 @@ function SalaryDetailDialog({ id, onClose }: { id: number; onClose: () => void }
           </>
         )}
       </DialogContent>
+      {d &&
+        receiptPaymentId &&
+        (() => {
+          const payment = d.payments.find((p) => p.id === receiptPaymentId);
+          return payment ? (
+            <SalaryReceiptDialog
+              payment={payment}
+              salary={d}
+              onClose={() => setReceiptPaymentId(null)}
+            />
+          ) : null;
+        })()}
     </Dialog>
   );
 }

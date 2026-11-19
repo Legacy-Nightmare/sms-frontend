@@ -165,41 +165,161 @@
   .receipt-cut-line span { background: #fff; }
 }
 
-/* Exam Fee admit card: same fillable-form fields as the receipt, plus a
-   photo box (top-right, like a real admit card) and signature lines
-   instead of a cut line. */
-.admit-card { position: relative; overflow: hidden; border: 1px solid var(--foreground); border-radius: 4px; padding: 16px 20px 20px; color: var(--foreground); }
-/* Full-color logo watermark behind the fields — low opacity (not grayscale)
-   so it stays colorful rather than reading as a faded photocopy stamp.
-   A pseudo-element (not an <img>) so it never captures clicks or shows up
-   in the tab order, and every direct child is lifted above it via z-index. */
-.admit-card::before {
+/* Student fee receipt redesign: branded card (logo header, pill title,
+   info bar, bordered totals table, a wax-seal-style status stamp) matching
+   a reference sample — on top of .receipt-copy's base box, overridden via
+   this compound class so specificity wins regardless of source order. */
+.receipt-copy.receipt-fee-card {
+  --rf-navy: #16285c;
+  position: relative;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  color: var(--foreground);
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--foreground) 8%, transparent);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+/* Full-color logo watermark, low opacity — same technique as
+   .admit-card::before. A pseudo-element so it never captures clicks; every
+   direct child is lifted above it via z-index. */
+.receipt-fee-card::before {
   content: "";
   position: absolute;
   inset: 0;
   background-image: url("/logo.jpeg");
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 60%;
-  opacity: 0.16;
+  background-size: 48%;
+  opacity: 0.1;
 }
-.admit-card > * { position: relative; z-index: 1; }
-/* Photo + header sit side by side in a flex row (not absolutely positioned
-   over the header text) — min-width: 0 on the header lets a long school
-   name wrap inside its own column instead of overflowing into the photo. */
-.admit-card-top { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 16px; }
-.admit-card-photo { flex-shrink: 0; width: 70px; height: 86px; border: 1px solid var(--muted-foreground); border-radius: 4px; display: grid; place-items: center; overflow: hidden; color: var(--muted-foreground); font-size: 11px; background: var(--panel); }
-.admit-card-photo img { width: 100%; height: 100%; object-fit: cover; }
-.admit-card-header { flex: 1; min-width: 0; text-align: left; }
-.admit-card-header p { margin: 0; overflow-wrap: break-word; }
-.admit-card-header h2 { margin: 8px 0 0; font-size: 17px; }
-.admit-card-declaration { font-size: 12px; line-height: 1.5; margin: 16px 0 0; }
-.admit-card-signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 11px; text-align: center; }
-.admit-card-signature-line { width: 110px; border-top: 1px solid var(--foreground); margin-bottom: 6px; }
+.receipt-fee-card > * { position: relative; z-index: 1; }
+.receipt-fee-card .receipt-copy-tag {
+  top: 16px;
+  right: 0;
+  padding: 7px 16px;
+  border-radius: 8px 0 0 8px;
+  background: var(--rf-navy);
+  color: #fff;
+  font-size: 10.5px;
+}
+.rf-header { display: flex; align-items: center; gap: 14px; padding: 20px 24px 10px; }
+.rf-logo { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; flex: none; }
+.rf-header-text h2 { margin: 0; font: 700 19px var(--font-serif); color: var(--rf-navy); }
+.rf-header-text p { margin: 3px 0 0; font-size: 11.5px; font-weight: 600; color: var(--rf-navy); }
+.rf-title-row { display: flex; align-items: center; gap: 10px; padding: 2px 24px 14px; }
+.rf-title-line { flex: 1; height: 1px; background: var(--border); }
+.rf-title-pill { flex: none; padding: 7px 22px; border-radius: 999px; background: var(--rf-navy); color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.rf-info-bar { display: flex; margin: 0 24px 16px; padding: 10px 6px; border-radius: 12px; background: color-mix(in oklab, var(--rf-navy) 7%, var(--panel)); }
+.rf-info-item { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; padding: 0 10px; border-right: 1px solid var(--border); }
+.rf-info-item:last-child { border-right: 0; }
+.rf-info-item svg { flex: none; color: var(--rf-navy); }
+.rf-info-item > div { min-width: 0; }
+.rf-info-item span { display: block; font-size: 10px; color: var(--muted-foreground); }
+.rf-info-item strong { display: block; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rf-body { display: flex; gap: 14px; padding: 0 24px 4px; align-items: flex-start; }
+.rf-table { flex: 1; min-width: 0; border-collapse: collapse; font-size: 13px; }
+.rf-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); }
+.rf-table td:first-child { color: var(--muted-foreground); font-weight: 600; width: 50%; }
+.rf-table td:last-child { font-weight: 700; text-align: right; }
+.rf-table tr:last-child td { border-bottom: 0; }
+.rf-row-highlight td { background: color-mix(in oklab, var(--green) 16%, var(--panel)); color: var(--green); }
+.rf-row-highlight td:first-child { border-radius: 8px 0 0 8px; }
+.rf-row-highlight td:last-child { border-radius: 0 8px 8px 0; font-size: 14px; }
+.rf-row-highlight-blue td { background: color-mix(in oklab, var(--blue) 16%, var(--panel)); color: var(--blue); }
+.rf-row-highlight-blue td:first-child { border-radius: 8px 0 0 8px; }
+.rf-row-highlight-blue td:last-child { border-radius: 0 8px 8px 0; font-size: 14px; }
+.rf-stamp-col { flex: none; width: 108px; display: flex; align-items: center; justify-content: center; padding-top: 10px; }
+.rf-stamp { width: 100px; height: 100px; border-radius: 50%; transform: rotate(-12deg); display: flex; align-items: center; justify-content: center; }
+.rf-stamp-ring { width: 100%; height: 100%; border-radius: 50%; border: 3px double currentColor; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; }
+.rf-stamp-stars { font-size: 7px; letter-spacing: 3px; }
+.rf-stamp strong { font: 800 15px var(--font-serif); text-transform: uppercase; letter-spacing: .03em; }
+.rf-stamp-green { color: var(--green); }
+.rf-stamp-amber { color: var(--orange); }
+.rf-stamp-red { color: var(--red); }
+.rf-footer-row { display: flex; justify-content: space-between; align-items: flex-end; padding: 8px 24px 32px; gap: 16px; }
+.rf-received-by { display: flex; align-items: center; gap: 7px; }
+.rf-received-by svg { color: var(--rf-navy); flex: none; }
+.rf-received-by span { display: block; font-size: 10px; color: var(--muted-foreground); }
+.rf-received-by strong { display: block; font-size: 12.5px; }
+.rf-signature { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 150px; }
+.rf-signature-line { width: 100%; border-top: 1px solid var(--foreground); }
+.rf-signature span { font-size: 10px; color: var(--muted-foreground); }
+.rf-receipt-tag { position: absolute; left: 0; bottom: 0; margin: 0; padding: 7px 18px 7px 16px; border-radius: 0 10px 0 16px; background: var(--rf-navy); color: #fff; font-size: 10.5px; font-weight: 600; }
+
+/* Exam Fee admit card: ornate branded card (gold-bordered title pill,
+   corner ribbon, info rows with icons, a certify box, signatures + QR)
+   matching a reference sample. */
+.admit-card { --ac-navy: #16285c; --ac-gold: #c8a227; position: relative; }
+/* The card itself (header through footer) — about 70% of the printed
+   page; .ac-notes below it is the remaining ~30%. */
+.ac-main {
+  position: relative;
+  overflow: hidden;
+  border: 1.5px solid var(--ac-navy);
+  border-radius: 20px;
+  padding: 18px 22px 20px;
+  color: var(--foreground);
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--foreground) 8%, transparent);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+/* Full-color logo watermark behind everything — low opacity (not
+   grayscale) so it stays colorful rather than reading as a faded
+   photocopy stamp. A pseudo-element so it never captures clicks, and
+   every direct child is lifted above it via z-index. */
+.ac-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("/logo.jpeg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 68%;
+  opacity: 0.13;
+}
+.ac-main > * { position: relative; z-index: 1; }
+.ac-corner { position: absolute; top: 0; right: 0; width: 58%; height: auto; z-index: 0; pointer-events: none; }
+.ac-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.ac-header-text { max-width: 230px; }
+.ac-logo { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: none; }
+.ac-header-text h2 { margin: 0; font: 700 18px var(--font-serif); color: var(--ac-navy); }
+.ac-header-text p { margin: 2px 0 0; font-size: 11px; color: var(--muted-foreground); }
+.ac-title-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 10px; }
+.ac-gold-lines { flex: 1; height: 2px; background: var(--ac-gold); }
+.ac-title-pill { flex: none; padding: 9px 26px; border-radius: 999px; background: var(--ac-navy); border: 2px solid var(--ac-gold); color: #fff; font: 700 17px var(--font-serif); letter-spacing: .03em; text-transform: uppercase; }
+.ac-subtitle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.ac-navy-line { flex: 1; height: 1px; background: var(--ac-navy); }
+.ac-subtitle { flex: none; font: 700 13px var(--font-serif); color: var(--ac-navy); white-space: nowrap; }
+.ac-body { display: flex; gap: 14px; margin-bottom: 16px; }
+.ac-photo { flex: none; width: 92px; height: 112px; border: 1.5px solid var(--ac-navy); border-radius: 6px; display: grid; place-items: center; overflow: hidden; color: var(--muted-foreground); font-size: 11px; background: var(--panel); }
+.ac-photo img { width: 100%; height: 100%; object-fit: cover; }
+.ac-info { flex: 1; min-width: 0; border-radius: 10px; background: color-mix(in oklab, var(--ac-navy) 6%, var(--panel)); padding: 6px 12px; }
+.ac-info-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.ac-info-row:last-child { border-bottom: 0; }
+.ac-info-row > div { min-width: 0; display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap; }
+.ac-info-row span { color: var(--muted-foreground); }
+.ac-info-row strong { color: var(--foreground); }
+.ac-info-icon { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--ac-navy); color: #fff; }
+.ac-certify { position: relative; margin: 20px 0 16px; padding: 16px 16px 12px; border: 1px solid var(--ac-navy); border-radius: 10px; text-align: center; }
+.ac-certify-pill { position: absolute; top: 0; left: 50%; transform: translate(-50%, -50%); padding: 6px 18px; border-radius: 999px; background: var(--ac-navy); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.ac-certify p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.55; }
+.ac-sign-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.ac-sign { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; text-align: center; color: var(--ac-navy); }
+.ac-scribble { width: 90px; height: auto; color: var(--ac-navy); }
+.ac-sign-line { width: 100px; border-top: 1px solid var(--foreground); margin-bottom: 4px; }
+.ac-sign span { color: var(--foreground); }
+.ac-qr { flex: none; width: 64px; height: 64px; border: 1px solid var(--border); border-radius: 4px; }
+.ac-footer { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 999px; background: var(--ac-navy); color: #fff; font: italic 700 13px var(--font-serif); justify-content: center; }
+.ac-footer-line { flex: 1; height: 1px; background: var(--ac-gold); max-width: 60px; }
+/* The card's main design fills ~70% of the printed page; this strip below
+   it (the remaining ~30%) carries the standard admit-card instructions. */
+.ac-notes { margin-top: 16px; padding: 14px 18px; border: 1.5px dashed var(--ac-navy); border-radius: 10px; }
+.ac-notes-title { margin: 0 0 8px; font: 700 13px var(--font-serif); color: var(--ac-navy); }
+.ac-notes ol { margin: 0; padding-left: 18px; list-style: decimal; display: grid; gap: 6px; font-size: 12px; line-height: 1.4; color: var(--foreground); }
 @media print {
-  .admit-card { border-color: #000; }
-  .admit-card-photo { border-color: #000; }
-  .admit-card-signature-line { border-color: #000; }
+  .ac-main { border-color: #000; }
 }
 
 /* Progress report (semester marksheet) preview — a dashboard-style card
