@@ -384,7 +384,6 @@ button.notice-row { width: 100%; border: 0; border-bottom: 1px solid oklch(0.93 
 }
 .admit-card-form select:disabled, .admit-card-form input:disabled { background: oklch(0.96 0.01 234); color: var(--muted-foreground); }
 .admit-exam-label { max-width: 360px; }
-.admit-recaptcha { margin-top: 4px; }
 .admit-status { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 11px 14px; border-radius: 8px; font-size: 12.5px; line-height: 1.5; }
 .admit-status-error { background: oklch(0.96 0.03 25); color: oklch(0.42 0.17 25); }
 .admit-status-info { background: oklch(0.95 0.04 164); color: oklch(0.38 0.1 164); }

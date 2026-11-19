@@ -1,9 +1,9 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Download, IdCard, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BackToTop, SiteFooter, SiteHeader, SubpageHero } from "@/components/public-site/site-chrome";
-import { Recaptcha, type RecaptchaHandle } from "@/components/public-site/recaptcha";
+import { getRecaptchaToken } from "@/components/public-site/recaptcha";
 import { fetchPublicSite } from "@/lib/public-site-api";
 import { PublicApiError } from "@/lib/public-api";
 import {
@@ -25,11 +25,9 @@ export function AdmitCardPage() {
   const [roll, setRoll] = useState("");
   const [exams, setExams] = useState<PublicAdmitCardExamDto[] | null>(null);
   const [examId, setExamId] = useState("");
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [finding, setFinding] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [status, setStatus] = useState<Status>(null);
-  const recaptchaRef = useRef<RecaptchaHandle>(null);
 
   const selectedClass = classes.data?.find((c) => String(c.id) === classId);
   const sections = selectedClass?.sections ?? [];
@@ -75,12 +73,13 @@ export function AdmitCardPage() {
       setStatus({ kind: "error", message: "Select an exam first." });
       return;
     }
-    if (!recaptchaToken) {
-      setStatus({ kind: "error", message: "Please complete the reCAPTCHA check first." });
-      return;
-    }
     setDownloading(true);
     try {
+      const recaptchaToken = await getRecaptchaToken("download_admit_card");
+      if (!recaptchaToken) {
+        setStatus({ kind: "error", message: "reCAPTCHA check failed to load. Please try again shortly." });
+        return;
+      }
       const result = await requestPublicAdmitCardDownload({
         classId: parseInt(classId, 10),
         sectionId: parseInt(sectionId, 10),
@@ -111,8 +110,6 @@ export function AdmitCardPage() {
             : "Couldn't generate the admit card right now. Please try again shortly.",
       });
     } finally {
-      recaptchaRef.current?.reset();
-      setRecaptchaToken(null);
       setDownloading(false);
     }
   };
@@ -209,13 +206,7 @@ export function AdmitCardPage() {
                 </label>
 
                 {examId && (
-                  <div className="admit-recaptcha">
-                    <Recaptcha ref={recaptchaRef} onChange={setRecaptchaToken} />
-                  </div>
-                )}
-
-                {examId && (
-                  <Button type="button" onClick={handleDownload} disabled={downloading || !recaptchaToken}>
+                  <Button type="button" onClick={handleDownload} disabled={downloading}>
                     <Download size={14} />
                     {downloading ? "Checking…" : "Download Admit Card"}
                   </Button>
