@@ -134,6 +134,11 @@ export function FinanceReportTab() {
           <strong>{money(summary.data?.salaryPayable ?? 0)}</strong>
           <small>Unpaid teacher salary, now</small>
         </Panel>
+        <Panel className="stat stat-orange">
+          <span>Expense Payable</span>
+          <strong>{money(summary.data?.expensePayable ?? 0)}</strong>
+          <small>Unpaid expense bills, now</small>
+        </Panel>
       </div>
 
       <Panel>

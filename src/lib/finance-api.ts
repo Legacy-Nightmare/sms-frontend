@@ -86,10 +86,12 @@ export interface TeacherSalaryDto {
 export interface ExpenseDto {
   id: number;
   category: string;
-  amount: number;
+  amountDue: number;
+  paid: number;
+  remaining: number;
+  status: FeeStatus;
   date: string;
   note: string | null;
-  status: "active" | "voided";
   createdAt: string;
 }
 
@@ -101,6 +103,7 @@ export interface FinanceSummaryDto {
   profitLoss: number;
   totalDue: number;
   salaryPayable: number;
+  expensePayable: number;
 }
 
 export interface TrendPointDto {
@@ -289,6 +292,21 @@ export const createExpense = (input: {
   date: string;
   note?: string | undefined;
 }) => apiPost<ExpenseDto>("/finance/expenses", input);
+
+export const fetchExpense = (id: number) =>
+  apiGet<ExpenseDto & { payments: PaymentDto[] }>(`/finance/expenses/${id}`);
+
+export const recordExpensePayment = (
+  expenseId: number,
+  input: { amount: number; method: PaymentMethod; paidAt: string; note?: string | undefined },
+) =>
+  apiPost<PaymentDto>(`/finance/expenses/${expenseId}/payments`, {
+    ...input,
+    idempotencyKey: newIdempotencyKey(),
+  });
+
+export const voidExpensePayment = (paymentId: number, reason: string) =>
+  apiPost<PaymentDto>(`/finance/expense-payments/${paymentId}/void`, { reason });
 
 export const voidExpense = (id: number, reason: string) =>
   apiPost<ExpenseDto>(`/finance/expenses/${id}/void`, { reason });
