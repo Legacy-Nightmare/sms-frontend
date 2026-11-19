@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { BackToTop, SiteFooter, SiteHeader, SubpageHero } from "@/components/public-site/site-chrome";
@@ -6,7 +6,15 @@ import { resolvePublicAssetUrl } from "@/lib/public-api";
 import { fetchPublicSite, type GalleryPhotoDto } from "@/lib/public-site-api";
 
 function Lightbox({ photo, onClose }: { photo: GalleryPhotoDto; onClose: () => void }) {
+  // F-16: this opened with no role/aria-modal at all, so a screen reader
+  // never announced it as a dialog — it just silently read whatever text
+  // happened to be behind the overlay. Moving focus to the close button on
+  // open is the minimum a dialog needs: it's reachable without a mouse and
+  // Tab doesn't escape into the page underneath immediately.
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
+    closeButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
@@ -16,8 +24,20 @@ function Lightbox({ photo, onClose }: { photo: GalleryPhotoDto; onClose: () => v
 
   return (
     <div className="notice-modal-overlay lightbox-overlay" onClick={onClose}>
-      <div className="lightbox-frame" onClick={(e) => e.stopPropagation()}>
-        <button type="button" className="notice-modal-close lightbox-close" onClick={onClose} aria-label="Close">
+      <div
+        className="lightbox-frame"
+        role="dialog"
+        aria-modal="true"
+        aria-label={photo.caption || "Photo viewer"}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="notice-modal-close lightbox-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
           <X size={18} />
         </button>
         <img src={resolvePublicAssetUrl(photo.imageUrl)} alt={photo.caption ?? ""} />
