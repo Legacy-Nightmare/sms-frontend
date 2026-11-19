@@ -53,6 +53,7 @@ export interface StudentFeeDto {
   note: string | null;
   examId: number | null;
   examName: string | null;
+  examIssuesAdmitCard: boolean;
   createdAt: string;
 }
 

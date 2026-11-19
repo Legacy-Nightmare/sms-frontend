@@ -498,13 +498,30 @@ function StudentFeeDetailDialog({ id, onClose }: { id: number; onClose: () => vo
         receiptPaymentId &&
         (() => {
           const payment = detail.data.payments.find((p) => p.id === receiptPaymentId);
-          return payment ? (
+          if (!payment) return null;
+          // Reprinting an earlier instalment must show the balance as it
+          // stood right after *that* payment, not the bill's current
+          // (possibly since-paid-off) state — otherwise an old receipt
+          // claims "Remaining ৳0 / Paid" for a payment that left a balance.
+          const paidThroughThisPayment = detail.data.payments
+            .filter((p) => p.status === "active" && p.createdAt <= payment.createdAt)
+            .reduce((sum, p) => sum + p.amount, 0);
+          const remainingAtTime = detail.data.amountDue - paidThroughThisPayment;
+          const statusAtTime: FeeStatus =
+            remainingAtTime <= 0 ? "PAID" : paidThroughThisPayment > 0 ? "PARTIAL" : "UNPAID";
+          const feeAtTime: StudentFeeDto = {
+            ...detail.data,
+            paid: paidThroughThisPayment,
+            remaining: remainingAtTime,
+            status: statusAtTime,
+          };
+          return (
             <ReceiptDialog
               payment={payment}
-              fee={detail.data}
+              fee={feeAtTime}
               onClose={() => setReceiptPaymentId(null)}
             />
-          ) : null;
+          );
         })()}
     </Dialog>
   );
@@ -821,6 +838,15 @@ export function StudentFeesTab() {
     if (newStatus === "PARTIAL") {
       if (newStatus !== fee.status) setPartialPayFee(fee);
       return;
+    }
+    // Setting UNPAID voids every active payment on this bill — the same
+    // destructive action as the row's own "Void" button, which already
+    // asks for a reason. This shortcut skipped that question entirely.
+    if (newStatus === "UNPAID" && fee.status !== "UNPAID") {
+      const confirmed = window.confirm(
+        `Set ${fee.studentName}'s ${fee.feeTypeName} bill to Unpaid? This voids ৳${fee.paid.toLocaleString("en-BD")} in recorded payment(s) — it cannot be undone.`,
+      );
+      if (!confirmed) return;
     }
     setFeeStatus.mutate({ fee, newStatus });
   };
@@ -1215,9 +1241,15 @@ export function StudentFeesTab() {
                     </DropdownMenuItem>
                     {f.feeTypeName.trim().toLowerCase() === "exam fee" && (
                       <DropdownMenuItem
-                        disabled={f.status !== "PAID" || !f.examId}
+                        disabled={f.status !== "PAID" || !f.examId || !f.examIssuesAdmitCard}
                         onClick={() => openAdmitCard(f)}
-                        title={!f.examId ? "This fee has no exam linked — it predates the Exam field" : undefined}
+                        title={
+                          !f.examId
+                            ? "This fee has no exam linked — it predates the Exam field"
+                            : !f.examIssuesAdmitCard
+                              ? "This exam is set to not issue an admit card"
+                              : undefined
+                        }
                       >
                         <IdCard size={14} />
                         Download Admit Card
