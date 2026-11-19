@@ -20,7 +20,7 @@ ENV VITE_API_BASE_URL=/api
 # baked in the same way as VITE_API_BASE_URL above, no secret needed. Real
 # key, registered to aphsmsp.com at https://www.google.com/recaptcha/admin,
 # paired with the backend's STG_RECAPTCHA_SECRET_KEY.
-ENV VITE_RECAPTCHA_SITE_KEY=6LcA3ycuAAAAABc8X41VLrlnMe16aB4MuWUXvSlE
+ENV VITE_RECAPTCHA_SITE_KEY=6Ldo6ycuAAAAAFvi0KtxqIGKhWWKzEGChiXlEC6S
 RUN npm run build
 
 # ---- runtime ----
