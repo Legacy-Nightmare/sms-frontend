@@ -211,6 +211,13 @@
 .rf-title-row { display: flex; align-items: center; gap: 10px; padding: 2px 24px 14px; }
 .rf-title-line { flex: 1; height: 1px; background: var(--border); }
 .rf-title-pill { flex: none; padding: 7px 22px; border-radius: 999px; background: var(--rf-navy); color: #fff; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+/* The name gets its own full-width line — a long one (F-20) wraps onto a
+   second line here instead of being cut off mid-word in the cramped info
+   bar, which only has room for short fixed-format values (roll, dates). */
+.rf-name-row { display: flex; align-items: center; gap: 7px; margin: 0 24px 10px; padding: 8px 14px; border-radius: 10px; background: color-mix(in oklab, var(--rf-navy) 7%, var(--panel)); }
+.rf-name-row svg { flex: none; color: var(--rf-navy); }
+.rf-name-row span { display: block; font-size: 10px; color: var(--muted-foreground); }
+.rf-name-row strong { display: block; font-size: 13px; overflow-wrap: break-word; }
 .rf-info-bar { display: flex; margin: 0 24px 16px; padding: 10px 6px; border-radius: 12px; background: color-mix(in oklab, var(--rf-navy) 7%, var(--panel)); }
 .rf-info-item { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; padding: 0 10px; border-right: 1px solid var(--border); }
 .rf-info-item:last-child { border-right: 0; }
@@ -394,11 +401,28 @@
   .pr-info-grid { grid-template-columns: 1fr 1fr; }
 }
 
+/* A receipt/salary-receipt/admit-card dialog's content (both copies
+   stacked) can be taller than a laptop viewport (1366x768 and smaller) —
+   without this, the Close/Download/Print row renders below the fold with
+   no way to scroll down and reach it. */
+.print-dialog { max-height: calc(100vh - 32px); overflow-y: auto; }
+.print-dialog .drawer-actions {
+  position: sticky;
+  bottom: 0;
+  background: var(--background);
+  padding-top: 8px;
+}
+
 /* Printable dialogs (marksheet, fee receipt): only .print-area renders,
    everything else — overlay, close button, Print/Close controls — is
    suppressed by the blanket visibility:hidden below. */
 @media print {
   body * { visibility: hidden; }
+  /* A page's own PrintableSheet (e.g. the Student Fees list) stays mounted
+     — just hidden on-screen — even while a receipt/admit-card dialog is
+     open on top of it. Without this, printing the dialog also reveals that
+     background sheet's .print-area, producing an extra page. */
+  body:has(.print-dialog) .print-only { display: none !important; }
   .print-area, .print-area * { visibility: visible; }
   /* Pulls a print-area out of normal page flow so it prints at the top of
      the page instead of leaving blank space where the (still visibility:

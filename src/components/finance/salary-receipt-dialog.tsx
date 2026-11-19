@@ -56,14 +56,15 @@ function SalaryReceiptCopy({
         <span className="rf-title-line" />
       </div>
 
-      <div className="rf-info-bar">
-        <div className="rf-info-item">
-          <User size={15} />
-          <div>
-            <span>Teacher&rsquo;s Name</span>
-            <strong>{salary.teacherName}</strong>
-          </div>
+      <div className="rf-name-row">
+        <User size={15} />
+        <div>
+          <span>Teacher&rsquo;s Name</span>
+          <strong>{salary.teacherName}</strong>
         </div>
+      </div>
+
+      <div className="rf-info-bar">
         <div className="rf-info-item">
           <IdCard size={15} />
           <div>

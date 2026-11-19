@@ -63,14 +63,15 @@ function ReceiptCopy({
         <span className="rf-title-line" />
       </div>
 
-      <div className="rf-info-bar">
-        <div className="rf-info-item">
-          <User size={15} />
-          <div>
-            <span>Student&rsquo;s Name</span>
-            <strong>{fee.studentName}</strong>
-          </div>
+      <div className="rf-name-row">
+        <User size={15} />
+        <div>
+          <span>Student&rsquo;s Name</span>
+          <strong>{fee.studentName}</strong>
         </div>
+      </div>
+
+      <div className="rf-info-bar">
         <div className="rf-info-item">
           <GraduationCap size={15} />
           <div>

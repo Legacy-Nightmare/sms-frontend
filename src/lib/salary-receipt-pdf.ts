@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
+import { BENGALI_FONT, registerBengaliFont } from "@/lib/pdf-fonts";
 import type { FeeStatus, PaymentDto, TeacherSalaryDto } from "@/lib/finance-api";
 
 // Mirrors receipt-pdf.ts's drawCopy — same branded-card layout, swapped to
@@ -14,6 +15,17 @@ function truncateToWidth(doc: jsPDF, text: string, maxWidth: number): string {
   let t = text;
   while (t.length > 1 && doc.getTextWidth(`${t}...`) > maxWidth) t = t.slice(0, -1);
   return `${t}...`;
+}
+
+// For a long name (F-20) — see receipt-pdf.ts's identical helper.
+function fitFontSize(doc: jsPDF, text: string, maxWidth: number, maxSize: number, minSize = 6.5): number {
+  let size = maxSize;
+  doc.setFontSize(size);
+  while (size > minSize && doc.getTextWidth(text) > maxWidth) {
+    size -= 0.5;
+    doc.setFontSize(size);
+  }
+  return size;
 }
 
 async function loadImageAsDataUrl(url: string): Promise<string | null> {
@@ -192,10 +204,17 @@ async function drawCopy(
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(label, colX + 5, infoTop + 4.5);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
-    doc.text(truncateToWidth(doc, value, infoColW - 10), colX + 5, infoTop + 8.5);
+    if (label === "Teacher's Name") {
+      // F-04: names may be Bangla — Helvetica can't render that script.
+      doc.setFont(BENGALI_FONT, "bold");
+      fitFontSize(doc, value, infoColW - 10, 9);
+      doc.text(truncateToWidth(doc, value, infoColW - 10), colX + 5, infoTop + 8.5);
+    } else {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(truncateToWidth(doc, value, infoColW - 10), colX + 5, infoTop + 8.5);
+    }
   });
 
   // Totals table (left) + status stamp (right).
@@ -274,7 +293,7 @@ async function drawCopy(
 
 export async function downloadSalaryReceiptPdf(payment: PaymentDto, salary: TeacherSalaryDto) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const logoDataUrl = await loadImageAsDataUrl(SCHOOL_LOGO);
+  const [logoDataUrl] = await Promise.all([loadImageAsDataUrl(SCHOOL_LOGO), registerBengaliFont(doc)]);
 
   await drawCopy(doc, 16, "Teacher Copy", payment, salary, logoDataUrl);
 
@@ -284,9 +303,12 @@ export async function downloadSalaryReceiptPdf(payment: PaymentDto, salary: Teac
   doc.setLineDashPattern([2, 1.5], 0);
   doc.line(MARGIN, cutY, CONTENT_RIGHT, cutY);
   doc.setLineDashPattern([], 0);
-  doc.setFontSize(9);
+  // "✂" isn't in jsPDF's default WinAnsi-only font (F-05) — plain ASCII
+  // label instead, same as receipt-pdf.ts.
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
   doc.setTextColor(120, 120, 120);
-  doc.text("✂", (MARGIN + CONTENT_RIGHT) / 2, cutY + 1.5, { align: "center" });
+  doc.text("CUT HERE", (MARGIN + CONTENT_RIGHT) / 2, cutY - 1.5, { align: "center" });
   doc.setTextColor(0, 0, 0);
 
   await drawCopy(doc, cutY + 10, "Office Copy", payment, salary, logoDataUrl);
