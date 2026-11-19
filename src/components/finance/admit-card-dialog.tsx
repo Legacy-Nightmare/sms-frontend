@@ -8,7 +8,13 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
 import { fetchSchoolProfile } from "@/lib/website-api";
 import { studentPhotoUrl, type StudentDto } from "@/lib/students-api";
-import { ADMIT_CARD_NOTES, admitCardQrPayload, downloadAdmitCardPdf } from "@/lib/admit-card-pdf";
+import {
+  ADMIT_CARD_NOTES,
+  admitCardQrPayload,
+  downloadAdmitCardPdf,
+  loadStudentPhotoDataUrl,
+  type AdmitCardData,
+} from "@/lib/admit-card-pdf";
 import type { StudentFeeDto } from "@/lib/finance-api";
 
 // A generic, non-identifying scribble — decoration standing in for a
@@ -44,20 +50,31 @@ export function AdmitCardDialog({
   const photoUrl = studentPhotoUrl(student.photoUrl);
   const examLabel = fee.examName ?? "";
 
+  const admitCardData: AdmitCardData = {
+    studentName: student.name,
+    studentCode: student.code,
+    roll: student.roll,
+    className: student.classEntity.name,
+    sectionName: student.section.name,
+    examName: fee.examName,
+  };
+
   useEffect(() => {
-    QRCode.toDataURL(admitCardQrPayload(fee, student), {
+    QRCode.toDataURL(admitCardQrPayload(admitCardData), {
       margin: 1,
       width: 160,
       color: { dark: "#16285c", light: "#ffffff" },
     })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fee, student]);
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      await downloadAdmitCardPdf(fee, student, profile.data?.phone, photoUrl);
+      const photoDataUrl = photoUrl ? await loadStudentPhotoDataUrl(student.id) : null;
+      await downloadAdmitCardPdf(admitCardData, profile.data?.phone, photoDataUrl);
     } catch {
       toast.error("Couldn't generate the admit card PDF");
     } finally {

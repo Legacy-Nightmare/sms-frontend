@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AdmissionRouteImport } from './routes/admission'
+import { Route as AdmitCardRouteImport } from './routes/admit-card'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LocationRouteImport } from './routes/location'
@@ -33,6 +34,11 @@ const AboutRoute = AboutRouteImport.update({
 const AdmissionRoute = AdmissionRouteImport.update({
   id: '/admission',
   path: '/admission',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdmitCardRoute = AdmitCardRouteImport.update({
+  id: '/admit-card',
+  path: '/admit-card',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admission': typeof AdmissionRoute
+  '/admit-card': typeof AdmitCardRoute
   '/contact': typeof ContactRoute
   '/gallery': typeof GalleryRoute
   '/location': typeof LocationRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admission': typeof AdmissionRoute
+  '/admit-card': typeof AdmitCardRoute
   '/contact': typeof ContactRoute
   '/gallery': typeof GalleryRoute
   '/location': typeof LocationRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/admission': typeof AdmissionRoute
+  '/admit-card': typeof AdmitCardRoute
   '/contact': typeof ContactRoute
   '/gallery': typeof GalleryRoute
   '/location': typeof LocationRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admission'
+    | '/admit-card'
     | '/contact'
     | '/gallery'
     | '/location'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admission'
+    | '/admit-card'
     | '/contact'
     | '/gallery'
     | '/location'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/admission'
+    | '/admit-card'
     | '/contact'
     | '/gallery'
     | '/location'
@@ -151,6 +163,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AdmissionRoute: typeof AdmissionRoute
+  AdmitCardRoute: typeof AdmitCardRoute
   ContactRoute: typeof ContactRoute
   GalleryRoute: typeof GalleryRoute
   LocationRoute: typeof LocationRoute
@@ -181,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/admission'
       fullPath: '/admission'
       preLoaderRoute: typeof AdmissionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admit-card': {
+      id: '/admit-card'
+      path: '/admit-card'
+      fullPath: '/admit-card'
+      preLoaderRoute: typeof AdmitCardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -239,6 +259,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AdmissionRoute: AdmissionRoute,
+  AdmitCardRoute: AdmitCardRoute,
   ContactRoute: ContactRoute,
   GalleryRoute: GalleryRoute,
   LocationRoute: LocationRoute,

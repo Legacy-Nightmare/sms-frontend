@@ -2,8 +2,21 @@ import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { getToken } from "@/lib/api";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
-import type { StudentFeeDto } from "@/lib/finance-api";
-import { studentPhotoProxyUrl, type StudentDto } from "@/lib/students-api";
+import { studentPhotoProxyUrl } from "@/lib/students-api";
+
+// Flat, source-agnostic shape — deliberately NOT StudentDto/StudentFeeDto,
+// since the public admit-card download page (no admin session, no access
+// to the authenticated /students or /finance APIs) builds this from its
+// own plain JSON response instead. The admin dialog builds the same shape
+// from its StudentDto/StudentFeeDto.
+export interface AdmitCardData {
+  studentName: string;
+  studentCode: string;
+  roll: number;
+  className: string;
+  sectionName: string;
+  examName: string | null;
+}
 
 // Fetches an image and converts it to a data URL so jsPDF's addImage (which
 // needs base64, not a URL) can embed it. Cross-origin hosts that don't send
@@ -25,17 +38,30 @@ async function loadImageAsDataUrl(url: string, headers?: HeadersInit): Promise<s
   }
 }
 
-// Plain real identity/exam facts (no fabricated data, no backend lookup
-// endpoint needed) — shared with admit-card-dialog.tsx so the on-screen QR
-// and the downloaded one encode the same thing.
-export function admitCardQrPayload(fee: StudentFeeDto, student: StudentDto): string {
+// Admin-only: resolves a student's photo through the backend's authenticated
+// proxy (bearer token required — see students.controller.ts's reasoning for
+// why this can't be a plain <img>-style fetch). The public download page has
+// no admin session, so it never calls this — its photo arrives pre-resolved
+// as a data URL straight from the backend's public response instead.
+export async function loadStudentPhotoDataUrl(studentId: number): Promise<string | null> {
+  const token = getToken();
+  return loadImageAsDataUrl(
+    studentPhotoProxyUrl(studentId),
+    token ? { Authorization: `Bearer ${token}` } : undefined,
+  );
+}
+
+// Plain real identity/exam facts (no fabricated data) — shared with
+// admit-card-dialog.tsx and the public download page so the on-screen QR
+// and the downloaded one always encode the same thing.
+export function admitCardQrPayload(data: AdmitCardData): string {
   return [
     SCHOOL_NAME,
     "Admit Card",
-    `Student: ${student.name}`,
-    `Roll: ${student.roll}`,
-    `Class: ${student.classEntity.name} - ${student.section.name}`,
-    `Exam: ${fee.examName ?? "Examination"}`,
+    `Student: ${data.studentName}`,
+    `Roll: ${data.roll}`,
+    `Class: ${data.className} - ${data.sectionName}`,
+    `Exam: ${data.examName ?? "Examination"}`,
   ].join("\n");
 }
 
@@ -62,10 +88,9 @@ function truncateToWidth(doc: jsPDF, text: string, maxWidth: number): string {
 }
 
 export async function downloadAdmitCardPdf(
-  fee: StudentFeeDto,
-  student: StudentDto,
+  data: AdmitCardData,
   phone: string | null | undefined,
-  photoUrl: string | null,
+  photoDataUrl: string | null,
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a5" });
   const left = 14;
@@ -74,7 +99,7 @@ export async function downloadAdmitCardPdf(
   const pageHeight = 190; // top=10 to bottom=200, leaving a 10mm page margin
   const cardHeight = pageHeight * 0.7; // the card itself — the rest is notes, below
   const width = right - left;
-  const examLabel = fee.examName ?? "";
+  const examLabel = data.examName ?? "";
 
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.6);
@@ -184,21 +209,11 @@ export async function downloadAdmitCardPdf(
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.4);
   doc.rect(photoX, photoY, photoW, photoH);
-  if (photoUrl) {
-    // Routed through the backend's own proxy (not fetched from the storage
-    // bucket directly) since the bucket sends no CORS headers — needs the
-    // same bearer token the rest of the authenticated API calls use.
-    const token = getToken();
-    const dataUrl = await loadImageAsDataUrl(
-      studentPhotoProxyUrl(student.id),
-      token ? { Authorization: `Bearer ${token}` } : undefined,
-    );
-    if (dataUrl) {
-      try {
-        doc.addImage(dataUrl, "JPEG", photoX, photoY, photoW, photoH);
-      } catch {
-        // Unsupported format or corrupt data — leave the empty box.
-      }
+  if (photoDataUrl) {
+    try {
+      doc.addImage(photoDataUrl, "JPEG", photoX, photoY, photoW, photoH);
+    } catch {
+      // Unsupported format or corrupt data — leave the empty box.
     }
   } else {
     doc.setFontSize(7);
@@ -211,10 +226,10 @@ export async function downloadAdmitCardPdf(
   const infoRight = right - 6;
   const infoW = infoRight - infoX;
   const rows: [string, string][] = [
-    ["Student's Name:", student.name],
-    ["Roll No:", String(student.roll)],
-    ["Class:", `${student.classEntity.name} · ${student.section.name}`],
-    ["Section:", student.section.name],
+    ["Student's Name:", data.studentName],
+    ["Roll No:", String(data.roll)],
+    ["Class:", `${data.className} · ${data.sectionName}`],
+    ["Section:", data.sectionName],
   ];
   rows.forEach(([label, value], i) => {
     const rowY = photoY + i * rowH;
@@ -271,7 +286,7 @@ export async function downloadAdmitCardPdf(
   doc.text("Head Teacher", right - 38, y + 4.5);
 
   try {
-    const qrDataUrl = await QRCode.toDataURL(admitCardQrPayload(fee, student), {
+    const qrDataUrl = await QRCode.toDataURL(admitCardQrPayload(data), {
       margin: 1,
       width: 160,
       color: { dark: "#16285c", light: "#ffffff" },
@@ -321,6 +336,6 @@ export async function downloadAdmitCardPdf(
     noteY += wrappedNote.length * 4 + 1.5;
   });
 
-  const filename = `admit-card-${student.code}-${examLabel || "exam"}.pdf`.replace(/\s+/g, "-");
+  const filename = `admit-card-${data.studentCode}-${examLabel || "exam"}.pdf`.replace(/\s+/g, "-");
   doc.save(filename);
 }

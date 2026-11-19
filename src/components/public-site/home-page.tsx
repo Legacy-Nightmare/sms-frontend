@@ -9,8 +9,8 @@ import {
   Download,
   FileText,
   GraduationCap,
+  IdCard,
   Link as LinkIcon,
-  ShieldCheck,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
@@ -164,7 +164,7 @@ export function HomePage() {
             <div className="panel-heading quick-heading"><h2><LinkIcon size={21} strokeWidth={3} />Quick Links</h2></div>
             <div className="quick-grid">
               <QuickCard to="/admission" Icon={GraduationCap} title="Admissions" tone="mint" />
-              <QuickCard to="/notices" Icon={ShieldCheck} title="Notices" tone="violet" />
+              <QuickCard to="/admit-card" Icon={IdCard} title="Download Admit Card" tone="violet" />
               <QuickCard to="/results" Icon={FileText} title="Results" tone="sky" />
               <QuickCard to="/gallery" Icon={Camera} title="Photo Gallery" tone="peach" />
             </div>

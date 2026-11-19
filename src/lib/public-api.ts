@@ -32,6 +32,23 @@ export async function publicGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function publicPost<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}/public${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    throw new PublicApiError(
+      res.status,
+      `Request to ${path} failed (${res.status})`,
+    );
+  }
+
+  return res.json() as Promise<T>;
+}
+
 // Resolve uploaded-file URLs without incorrectly prefixing absolute URLs.
 // RustFS public files use /sms-uploads/... and are served directly by Nginx.
 export function resolvePublicAssetUrl(path: string): string {

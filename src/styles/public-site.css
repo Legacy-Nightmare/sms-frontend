@@ -372,6 +372,25 @@ button.notice-row { width: 100%; border: 0; border-bottom: 1px solid oklch(0.93 
 .admission-contact-links { display: flex; gap: 14px; flex-wrap: wrap; }
 .admission-contact-links a { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--school-blue); }
 .admission-contact-links a:hover { text-decoration: underline; }
+.admit-card-form { display: flex; flex-direction: column; gap: 16px; }
+.admit-form-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.admit-card-form label, .admit-exam-label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--school-deep); }
+.admit-card-form select, .admit-card-form input, .admit-exam-label select {
+  height: 40px; padding: 0 12px; border: 1px solid oklch(0.88 0.04 234); border-radius: 8px;
+  background: white; font-size: 13px; font-weight: 400; color: var(--foreground);
+}
+.admit-card-form select:focus, .admit-card-form input:focus, .admit-exam-label select:focus {
+  outline: none; border-color: var(--school-blue);
+}
+.admit-card-form select:disabled, .admit-card-form input:disabled { background: oklch(0.96 0.01 234); color: var(--muted-foreground); }
+.admit-exam-label { max-width: 360px; }
+.admit-recaptcha { margin-top: 4px; }
+.admit-status { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 11px 14px; border-radius: 8px; font-size: 12.5px; line-height: 1.5; }
+.admit-status-error { background: oklch(0.96 0.03 25); color: oklch(0.42 0.17 25); }
+.admit-status-info { background: oklch(0.95 0.04 164); color: oklch(0.38 0.1 164); }
+@media (max-width: 720px) {
+  .admit-form-row { grid-template-columns: 1fr; }
+}
 
 /* Results */
 .results-notice { align-items: flex-start; justify-content: flex-start; gap: 14px; }
