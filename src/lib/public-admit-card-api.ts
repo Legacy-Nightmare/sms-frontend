@@ -14,11 +14,10 @@ export interface PublicAdmitCardExamDto {
 
 export interface PublicAdmitCardResultDto {
   eligible: boolean;
-  reason?: "NOT_FOUND" | "NOT_BILLED" | "UNPAID";
+  reason?: "NOT_FOUND" | "NOT_BILLED" | "UNPAID" | "NO_ADMIT_CARD";
   message?: string;
   admitCard?: {
     studentName: string;
-    studentCode: string;
     roll: number;
     className: string;
     sectionName: string;
@@ -45,6 +44,7 @@ export function requestPublicAdmitCardDownload(input: {
   roll: number;
   examId: number;
   recaptchaToken: string;
+  dateOfBirth?: string | undefined;
 }) {
   return publicPost<PublicAdmitCardResultDto>("/admit-card/download", input);
 }

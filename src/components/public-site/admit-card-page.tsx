@@ -23,6 +23,7 @@ export function AdmitCardPage() {
   const [classId, setClassId] = useState("");
   const [sectionId, setSectionId] = useState("");
   const [roll, setRoll] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [exams, setExams] = useState<PublicAdmitCardExamDto[] | null>(null);
   const [examId, setExamId] = useState("");
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
@@ -87,14 +88,18 @@ export function AdmitCardPage() {
         roll: parseInt(roll, 10),
         examId: parseInt(examId, 10),
         recaptchaToken,
+        dateOfBirth: dateOfBirth || undefined,
       });
       if (!result.eligible || !result.admitCard) {
         setStatus({ kind: "error", message: result.message ?? "This admit card isn't available yet." });
         return;
       }
+      // No student code in the public response by design (F-28) — it's
+      // never printed on the card, only used for the downloaded filename,
+      // so the roll number is a safe stand-in here.
       const data: AdmitCardData = {
         studentName: result.admitCard.studentName,
-        studentCode: result.admitCard.studentCode,
+        studentCode: `roll-${result.admitCard.roll}`,
         roll: result.admitCard.roll,
         className: result.admitCard.className,
         sectionName: result.admitCard.sectionName,
@@ -182,6 +187,14 @@ export function AdmitCardPage() {
                     resetBelow();
                   }}
                   placeholder="e.g. 12"
+                />
+              </label>
+              <label>
+                Date of birth <span className="muted-cell">(if on file)</span>
+                <input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
                 />
               </label>
             </div>
