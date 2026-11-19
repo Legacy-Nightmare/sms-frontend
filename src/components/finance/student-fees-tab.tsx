@@ -67,6 +67,18 @@ function money(n: number) {
   return `৳${n.toLocaleString("en-BD")}`;
 }
 
+// What identifies this specific bill: the real exam name for an Exam Fee
+// bill, the month/year for a recurring fee, or nothing for a one-time fee.
+// An Exam Fee bill with no exam linked (billed before the Exam field
+// existed) still carries a leftover period value in the DB — showing that
+// here would look like a real exam name, so it's called out instead.
+function billName(f: StudentFeeDto): string {
+  if (f.examName) return f.examName;
+  if (f.feeTypeName.trim().toLowerCase() === "exam fee") return "No exam linked";
+  if (f.periodMonth) return `${MONTHS[f.periodMonth - 1]} ${f.periodYear}`;
+  return "—";
+}
+
 const statusTone: Record<FeeStatus, string> = { PAID: "green", PARTIAL: "amber", UNPAID: "red" };
 
 function BillFeeDialog() {
@@ -892,7 +904,7 @@ export function StudentFeesTab() {
         toast.error("No active payment found for this fee");
         return;
       }
-      downloadReceiptPdf(latest, detail, profile.phone);
+      await downloadReceiptPdf(latest, detail, profile.phone);
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't generate the receipt");
     }
@@ -914,7 +926,7 @@ export function StudentFeesTab() {
     { header: "Student", key: "student" },
     { header: "Class / Section", key: "classSection" },
     { header: "Fee type", key: "feeType" },
-    { header: "Period", key: "period" },
+    { header: "Name", key: "period" },
     { header: "Billed", key: "billed", type: "currency" as const },
     { header: "Paid", key: "paid", type: "currency" as const },
     { header: "Remaining", key: "remaining", type: "currency" as const },
@@ -924,7 +936,7 @@ export function StudentFeesTab() {
     student: `${f.studentName} (${f.studentCode})`,
     classSection: `${f.className} · ${f.sectionName}`,
     feeType: f.feeTypeName,
-    period: f.periodMonth ? `${f.periodMonth}/${f.periodYear}` : "—",
+    period: billName(f),
     billed: f.amountDue,
     paid: f.paid,
     remaining: f.remaining,
@@ -1145,7 +1157,7 @@ export function StudentFeesTab() {
             "STUDENT",
             "CLASS / SECTION",
             "FEE TYPE",
-            "PERIOD",
+            "NAME",
             "BILLED",
             "PAID",
             "REMAINING",
@@ -1170,9 +1182,7 @@ export function StudentFeesTab() {
                 {f.className} · {f.sectionName}
               </td>
               <td>{f.feeTypeName}</td>
-              <td className="mono muted-cell">
-                {f.periodMonth ? `${f.periodMonth}/${f.periodYear}` : "—"}
-              </td>
+              <td className="mono muted-cell">{billName(f)}</td>
               <td className="mono">{money(f.amountDue)}</td>
               <td className="mono">{money(f.paid)}</td>
               <td className="mono strong">{money(f.remaining)}</td>

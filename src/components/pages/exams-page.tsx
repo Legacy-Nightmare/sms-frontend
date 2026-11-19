@@ -117,6 +117,11 @@ function CreateExamDialog() {
       }),
     onSuccess: (exam) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      // Finance's "Bill a fee" exam picker caches this separately (it's a
+      // different module/query key) — without this it keeps showing
+      // whatever exams existed when that dialog first mounted this session,
+      // silently hiding every exam created since.
+      queryClient.invalidateQueries({ queryKey: ["exams-for-billing"] });
       toast.success(`${name} created`);
       setOpen(false);
       setName("");
@@ -141,6 +146,7 @@ function CreateExamDialog() {
       updateExam(admitCardPromptExam!.id, { issuesAdmitCard }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exams-for-billing"] });
       setAdmitCardPromptExam(null);
     },
     onError: (error) =>
@@ -397,6 +403,7 @@ function EditExamDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exams-for-billing"] });
       toast.success("Exam updated");
       onOpenChange(false);
     },
@@ -555,6 +562,7 @@ function DeleteExamDialog({
     mutationFn: (examId: number) => deleteExam(examId),
     onSuccess: (_result, examId) => {
       queryClient.invalidateQueries({ queryKey: ["exams"] });
+      queryClient.invalidateQueries({ queryKey: ["exams-for-billing"] });
       toast.success("Exam deleted");
       onDeleted(examId);
       onOpenChange(false);
