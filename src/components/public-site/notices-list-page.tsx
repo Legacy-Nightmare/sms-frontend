@@ -1,7 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ChevronRight, FileText, Search, Trophy } from "lucide-react";
+import { ChevronRight, FileText, Search, Trophy, X } from "lucide-react";
 import { BackToTop, SiteFooter, SiteHeader, SubpageHero } from "@/components/public-site/site-chrome";
 import { fetchPublicNotices, fetchPublicResultsAnnouncements } from "@/lib/public-site-api";
 
@@ -13,6 +12,8 @@ interface FeedItem {
   sortKey: string;
   kind: "notice" | "result";
   className: string | null;
+  examType: string | null;
+  academicYear: string | null;
 }
 
 function formatDate(iso: string) {
@@ -21,8 +22,58 @@ function formatDate(iso: string) {
   );
 }
 
+// Reused for both notices and result announcements — a result has no free-text
+// body, so its exam type/year (otherwise never shown anywhere) fill the modal
+// instead of leaving it looking empty.
+function NoticeDetailModal({ item, onClose }: { item: FeedItem; onClose: () => void }) {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="notice-modal-overlay" onClick={onClose}>
+      <div className="notice-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="notice-modal-header">
+          <h2>{item.title}</h2>
+          <button type="button" className="notice-modal-close" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="notice-modal-body">
+          <p className="notice-date" style={{ marginBottom: 12 }}>
+            {item.date}
+            {item.className && <span className="notice-class-pill">{item.className}</span>}
+          </p>
+          {item.body && <p style={{ whiteSpace: "pre-wrap" }}>{item.body}</p>}
+          {item.kind === "result" && (
+            <dl className="notice-result-meta">
+              {item.examType && (
+                <>
+                  <dt>Exam type</dt>
+                  <dd>{item.examType === "final" ? "Final" : "Tutorial"}</dd>
+                </>
+              )}
+              {item.academicYear && (
+                <>
+                  <dt>Academic year</dt>
+                  <dd>{item.academicYear}</dd>
+                </>
+              )}
+            </dl>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function NoticesListPage({ initialQuery }: { initialQuery?: string | undefined }) {
   const [search, setSearch] = useState(initialQuery ?? "");
+  const [selected, setSelected] = useState<FeedItem | null>(null);
 
   const notices = useQuery({ queryKey: ["public-notices"], queryFn: fetchPublicNotices });
   const results = useQuery({
@@ -39,6 +90,8 @@ export function NoticesListPage({ initialQuery }: { initialQuery?: string | unde
       sortKey: n.publishedToWebsiteAt,
       kind: "notice",
       className: n.classEntity?.name ?? null,
+      examType: null,
+      academicYear: null,
     }));
     const resultItems: FeedItem[] = (results.data ?? []).map((r) => ({
       key: `result-${r.id}`,
@@ -48,6 +101,8 @@ export function NoticesListPage({ initialQuery }: { initialQuery?: string | unde
       sortKey: r.resultsAnnouncedAt,
       kind: "result",
       className: r.classEntity.name,
+      examType: r.type,
+      academicYear: r.academicYear,
     }));
     return [...noticeItems, ...resultItems].sort((a, b) => (a.sortKey < b.sortKey ? 1 : -1));
   }, [notices.data, results.data]);
@@ -83,10 +138,11 @@ export function NoticesListPage({ initialQuery }: { initialQuery?: string | unde
             </p>
           )}
           {visible.map((item) => (
-            <Link
+            <button
+              type="button"
               className="notice-row notice-row-full"
               key={item.key}
-              to={item.kind === "result" ? "/results" : "/notices"}
+              onClick={() => setSelected(item)}
             >
               <span className={`notice-icon ${item.kind === "result" ? "notice-icon-amber" : "notice-icon-sky"}`}>
                 {item.kind === "result" ? <Trophy size={17} /> : <FileText size={17} />}
@@ -100,10 +156,12 @@ export function NoticesListPage({ initialQuery }: { initialQuery?: string | unde
                 <span className="notice-date">{item.date}</span>
               </span>
               <ChevronRight className="notice-chevron" size={17} />
-            </Link>
+            </button>
           ))}
         </div>
       </main>
+
+      {selected && <NoticeDetailModal item={selected} onClose={() => setSelected(null)} />}
 
       <SiteFooter />
       <BackToTop />
