@@ -53,7 +53,10 @@ export function DashboardPage() {
   });
   const notices = useQuery({ queryKey: ["notices"], queryFn: fetchNotices });
   const classes = useQuery({ queryKey: ["classes"], queryFn: fetchClasses });
-  const teachers = useQuery({ queryKey: ["teachers"], queryFn: fetchTeachers });
+  // /teachers is admin/finance-only on the backend — a teacher account gets
+  // a 403 (F-15), so don't ask for it, and don't show a misleading "0".
+  const isAdmin = user?.role === "admin";
+  const teachers = useQuery({ queryKey: ["teachers"], queryFn: fetchTeachers, enabled: isAdmin });
 
   const firstName = user?.name?.split(" ")[0] ?? "there";
 
@@ -198,7 +201,7 @@ export function DashboardPage() {
           <div className="panel-title">
             <h2>Class-wise Distribution</h2>
           </div>
-          <div className="donut-split">
+          <div className="donut-split" style={isAdmin ? undefined : { gridTemplateColumns: "1fr" }}>
             <div className="donut-split-col">
               <p className="donut-split-label">Students</p>
               <div className="donut-chart donut-chart-sm">
@@ -236,45 +239,47 @@ export function DashboardPage() {
                 {classDistribution.length === 0 && <li className="muted-cell">No classes yet</li>}
               </ul>
             </div>
-            <div className="donut-split-col">
-              <p className="donut-split-label">Teachers</p>
-              <div className="donut-chart donut-chart-sm">
-                {teacherDistribution.length > 0 && (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={teacherDistribution}
-                        dataKey="value"
-                        innerRadius={32}
-                        outerRadius={48}
-                        paddingAngle={2}
-                        isAnimationActive={false}
-                      >
-                        {teacherDistribution.map((entry) => (
-                          <Cell key={entry.name} fill={entry.color} stroke="none" />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-                <div className="donut-center">
-                  <strong>{teacherTotal}</strong>
-                  <small>Teachers</small>
+            {isAdmin && (
+              <div className="donut-split-col">
+                <p className="donut-split-label">Teachers</p>
+                <div className="donut-chart donut-chart-sm">
+                  {teacherDistribution.length > 0 && (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={teacherDistribution}
+                          dataKey="value"
+                          innerRadius={32}
+                          outerRadius={48}
+                          paddingAngle={2}
+                          isAnimationActive={false}
+                        >
+                          {teacherDistribution.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} stroke="none" />
+                          ))}
+                        </Pie>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                  <div className="donut-center">
+                    <strong>{teacherTotal}</strong>
+                    <small>Teachers</small>
+                  </div>
                 </div>
+                <ul className="donut-legend donut-legend-sm">
+                  {teacherDistribution.map((entry) => (
+                    <li key={entry.name}>
+                      <span style={{ background: entry.color }} />
+                      {entry.name}
+                      <b>{entry.value}</b>
+                    </li>
+                  ))}
+                  {teacherDistribution.length === 0 && (
+                    <li className="muted-cell">No assignments yet</li>
+                  )}
+                </ul>
               </div>
-              <ul className="donut-legend donut-legend-sm">
-                {teacherDistribution.map((entry) => (
-                  <li key={entry.name}>
-                    <span style={{ background: entry.color }} />
-                    {entry.name}
-                    <b>{entry.value}</b>
-                  </li>
-                ))}
-                {teacherDistribution.length === 0 && (
-                  <li className="muted-cell">No assignments yet</li>
-                )}
-              </ul>
-            </div>
+            )}
           </div>
         </Panel>
 

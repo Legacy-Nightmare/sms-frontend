@@ -182,6 +182,7 @@ function AddStaffDialog() {
 
 function EditStaffDialog({ staff }: { staff: StaffDto }) {
   const queryClient = useQueryClient();
+  const isSelf = useAuth().user?.id === staff.id;
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<StaffRole>(staff.role);
   const [teacherId, setTeacherId] = useState(staff.teacherId != null ? String(staff.teacherId) : "");
@@ -265,6 +266,8 @@ function EditStaffDialog({ staff }: { staff: StaffDto }) {
               type="checkbox"
               style={{ width: "auto" }}
               checked={isActive}
+              disabled={isSelf}
+              title={isSelf ? "You can't deactivate your own account" : undefined}
               onChange={(e) => setIsActive(e.target.checked)}
             />
             Active (can sign in)
