@@ -43,8 +43,8 @@ export function AdmitCardPage() {
 
   const findExams = async () => {
     setStatus(null);
-    if (!classId || !sectionId || !roll) {
-      setStatus({ kind: "error", message: "Select a class, section, and roll number first." });
+    if (!classId || !sectionId || !roll || !dateOfBirth) {
+      setStatus({ kind: "error", message: "Select a class, section, roll number, and date of birth first." });
       return;
     }
     setFinding(true);
@@ -82,6 +82,10 @@ export function AdmitCardPage() {
       setStatus({ kind: "error", message: "Select an exam first." });
       return;
     }
+    if (!dateOfBirth) {
+      setStatus({ kind: "error", message: "Enter the date of birth first." });
+      return;
+    }
     if (!recaptchaToken) {
       setStatus({ kind: "error", message: "Please complete the reCAPTCHA check first." });
       return;
@@ -94,7 +98,7 @@ export function AdmitCardPage() {
         roll: parseInt(roll, 10),
         examId: parseInt(examId, 10),
         recaptchaToken,
-        dateOfBirth: dateOfBirth || undefined,
+        dateOfBirth,
       });
       if (!result.eligible || !result.admitCard) {
         setStatus({ kind: "error", message: result.message ?? "This admit card isn't available yet." });
@@ -198,11 +202,10 @@ export function AdmitCardPage() {
                 />
               </label>
               <label>
-                <span>
-                  Date of birth <span className="muted-cell">(if on file)</span>
-                </span>
+                Date of birth
                 <input
                   type="date"
+                  required
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
                 />
