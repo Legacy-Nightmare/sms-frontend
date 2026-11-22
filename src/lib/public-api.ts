@@ -19,15 +19,21 @@ export class PublicApiError extends Error {
   }
 }
 
+// A 429 carries the backend's user-facing "wait a minute" message (F-31) —
+// surface it instead of the generic status line.
+async function publicError(res: Response, path: string) {
+  let message = `Request to ${path} failed (${res.status})`;
+  if (res.status === 429) {
+    const body = (await res.json().catch(() => null)) as { message?: unknown } | null;
+    if (typeof body?.message === "string") message = body.message;
+  }
+  return new PublicApiError(res.status, message);
+}
+
 export async function publicGet<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}/public${path}`);
 
-  if (!res.ok) {
-    throw new PublicApiError(
-      res.status,
-      `Request to ${path} failed (${res.status})`,
-    );
-  }
+  if (!res.ok) throw await publicError(res, path);
 
   return res.json() as Promise<T>;
 }
@@ -39,12 +45,7 @@ export async function publicPost<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
 
-  if (!res.ok) {
-    throw new PublicApiError(
-      res.status,
-      `Request to ${path} failed (${res.status})`,
-    );
-  }
+  if (!res.ok) throw await publicError(res, path);
 
   return res.json() as Promise<T>;
 }

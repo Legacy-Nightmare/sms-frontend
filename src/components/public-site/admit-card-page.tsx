@@ -63,8 +63,14 @@ export function AdmitCardPage() {
             "No admit-card-eligible exams were found for these details. Double-check the class, section, and roll number, or contact the school office.",
         });
       }
-    } catch {
-      setStatus({ kind: "error", message: "Couldn't look up exams right now. Please try again shortly." });
+    } catch (error) {
+      setStatus({
+        kind: "error",
+        message:
+          error instanceof PublicApiError && error.status === 429
+            ? error.message
+            : "Couldn't look up exams right now. Please try again shortly.",
+      });
     } finally {
       setFinding(false);
     }
@@ -111,7 +117,9 @@ export function AdmitCardPage() {
       setStatus({
         kind: "error",
         message:
-          error instanceof PublicApiError
+          error instanceof PublicApiError && error.status === 429
+            ? error.message
+            : error instanceof PublicApiError
             ? "Please complete the reCAPTCHA check correctly and try again."
             : "Couldn't generate the admit card right now. Please try again shortly.",
       });
