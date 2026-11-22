@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import QRCode from "qrcode";
 import { getToken } from "@/lib/api";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
-import { BENGALI_FONT, registerBengaliFont } from "@/lib/pdf-fonts";
+import { drawName, loadNameFonts } from "@/lib/pdf-fonts";
 import { studentPhotoProxyUrl } from "@/lib/students-api";
 
 // Flat, source-agnostic shape — deliberately NOT StudentDto/StudentFeeDto,
@@ -94,7 +94,7 @@ export async function downloadAdmitCardPdf(
   photoDataUrl: string | null,
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a5" });
-  await registerBengaliFont(doc);
+  await loadNameFonts();
   const left = 14;
   const right = 134; // A5 portrait is 148mm wide
   const top = 10;
@@ -239,11 +239,14 @@ export async function downloadAdmitCardPdf(
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(label, infoX, rowY + 3.5);
-    // F-04: Student's Name may be Bangla — Helvetica can't render that script.
-    doc.setFont(label === "Student's Name:" ? BENGALI_FONT : "helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text(truncateToWidth(doc, value, infoW), infoX, rowY + 7.2);
+    if (i === 0) {
+      drawName(doc, value, infoX, rowY + 7.2, infoW, { sizePt: 9, minPt: 7, maxLines: 1 });
+    } else {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 0);
+      doc.text(truncateToWidth(doc, value, infoW), infoX, rowY + 7.2);
+    }
     if (i < rows.length - 1) {
       doc.setDrawColor(222, 226, 230);
       doc.setLineWidth(0.2);

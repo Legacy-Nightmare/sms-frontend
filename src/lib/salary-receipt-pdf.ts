@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { SCHOOL_LOGO, SCHOOL_NAME } from "@/lib/school-info";
-import { BENGALI_FONT, registerBengaliFont } from "@/lib/pdf-fonts";
+import { drawName, loadNameFonts } from "@/lib/pdf-fonts";
 import type { FeeStatus, PaymentDto, TeacherSalaryDto } from "@/lib/finance-api";
 
 // Mirrors receipt-pdf.ts's drawCopy — same branded-card layout, swapped to
@@ -15,17 +15,6 @@ function truncateToWidth(doc: jsPDF, text: string, maxWidth: number): string {
   let t = text;
   while (t.length > 1 && doc.getTextWidth(`${t}...`) > maxWidth) t = t.slice(0, -1);
   return `${t}...`;
-}
-
-// For a long name (F-20) — see receipt-pdf.ts's identical helper.
-function fitFontSize(doc: jsPDF, text: string, maxWidth: number, maxSize: number, minSize = 6.5): number {
-  let size = maxSize;
-  doc.setFontSize(size);
-  while (size > minSize && doc.getTextWidth(text) > maxWidth) {
-    size -= 0.5;
-    doc.setFontSize(size);
-  }
-  return size;
 }
 
 async function loadImageAsDataUrl(url: string): Promise<string | null> {
@@ -192,9 +181,11 @@ async function drawCopy(
     ["Designation", designation],
     ["Date", payment.paidAt],
   ];
-  const infoColW = (width - 8) / infoItems.length;
+  // The name column is wider than the rest so a long name stays on one line.
+  const colWs = [0.4, 0.25, 0.15, 0.2].map((f) => f * (width - 8));
   infoItems.forEach(([label, value], i) => {
-    const colX = left + 4 + i * infoColW;
+    const colX = left + 4 + colWs.slice(0, i).reduce((a, b) => a + b, 0);
+    const colW = colWs[i] ?? 0;
     if (i > 0) {
       doc.setDrawColor(...BORDER);
       doc.setLineWidth(0.2);
@@ -204,16 +195,13 @@ async function drawCopy(
     doc.setFontSize(7);
     doc.setTextColor(...MUTED);
     doc.text(label, colX + 5, infoTop + 4.5);
-    doc.setTextColor(0, 0, 0);
-    if (label === "Teacher's Name") {
-      // F-04: names may be Bangla — Helvetica can't render that script.
-      doc.setFont(BENGALI_FONT, "bold");
-      fitFontSize(doc, value, infoColW - 10, 9);
-      doc.text(truncateToWidth(doc, value, infoColW - 10), colX + 5, infoTop + 8.5);
+    if (i === 0) {
+      drawName(doc, value, colX + 5, infoTop + 8.5, colW - 10, { sizePt: 9, minPt: 7 });
     } else {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text(truncateToWidth(doc, value, infoColW - 10), colX + 5, infoTop + 8.5);
+      doc.setTextColor(0, 0, 0);
+      doc.text(truncateToWidth(doc, value, colW - 10), colX + 5, infoTop + 8.5);
     }
   });
 
@@ -293,7 +281,7 @@ async function drawCopy(
 
 export async function downloadSalaryReceiptPdf(payment: PaymentDto, salary: TeacherSalaryDto) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const [logoDataUrl] = await Promise.all([loadImageAsDataUrl(SCHOOL_LOGO), registerBengaliFont(doc)]);
+  const [logoDataUrl] = await Promise.all([loadImageAsDataUrl(SCHOOL_LOGO), loadNameFonts()]);
 
   await drawCopy(doc, 16, "Teacher Copy", payment, salary, logoDataUrl);
 
