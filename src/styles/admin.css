@@ -408,7 +408,11 @@
 .print-dialog { max-height: calc(100vh - 32px); overflow-y: auto; }
 .print-dialog .drawer-actions {
   position: sticky;
-  bottom: 0;
+  bottom: -24px;
+  padding-bottom: 24px;
+  /* F-19: the receipt's own children are z-index: 1, so without a higher
+     value they painted over this row as the content scrolled under it. */
+  z-index: 10;
   background: var(--background);
   padding-top: 8px;
 }
@@ -423,6 +427,9 @@
      open on top of it. Without this, printing the dialog also reveals that
      background sheet's .print-area, producing an extra page. */
   body:has(.print-dialog) .print-only { display: none !important; }
+  /* F-01: with a print dialog open, the page behind it is hidden but still
+     takes up layout — pushing the receipt onto blank trailing pages. */
+  body:has(.print-dialog) .school-shell { display: none !important; }
   .print-area, .print-area * { visibility: visible; }
   /* Pulls a print-area out of normal page flow so it prints at the top of
      the page instead of leaving blank space where the (still visibility:
@@ -430,9 +437,21 @@
      in-page print-area; .print-dialog below additionally resets a Dialog's
      own fixed-position/centering chrome for the same purpose. */
   .print-area { position: absolute; top: 0; left: 0; width: 100%; }
+  /* F-13: everything else in the page is only visibility:hidden, so it still
+     lays out and adds blank trailing pages. Drop it from layout entirely —
+     except the print-area itself and the ancestors that contain it. */
+  .school-shell :not(.print-area):not(.print-area *):not(:has(.print-area)) { display: none !important; }
   .print-dialog {
     position: static !important;
-    transform: none !important;
+    animation: none !important;
+    /* Tailwind v4 centres the dialog with the `translate` property
+       (var(--tw-translate-*)), which `transform: none` doesn't clear. Any
+       translate/transform also makes the dialog the containing block for
+       an absolutely-positioned .print-area, shoving the receipt off-page
+       (F-01) — so zero the variables rather than write transform/translate,
+       which the CSS minifier rewrites into a non-none translate3d(). */
+    --tw-translate-x: 0px !important;
+    --tw-translate-y: 0px !important;
     inset: auto !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -440,6 +459,15 @@
     border: none !important;
     padding: 0 !important;
   }
+  .print-dialog .print-area { position: static; }
+  .print-dialog .drawer-actions { display: none; }
+  /* Radix locks body scroll (overflow: hidden) and the dialog scrolls
+     inside max-height — either one clips the print to the first page. */
+  body { overflow: visible !important; }
+  .print-dialog { max-height: none !important; overflow: visible !important; }
+  /* Two receipt copies are ~1320px tall — more than an A4 page's printable
+     height — so they're scaled to land on one sheet (F-01). */
+  .print-dialog .print-area:has(.receipt-fee-card) { zoom: 0.75; }
 }
 .print-only { display: none; }
 @media print {
