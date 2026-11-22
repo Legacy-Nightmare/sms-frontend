@@ -198,7 +198,9 @@ export function AdmitCardPage() {
                 />
               </label>
               <label>
-                Date of birth <span className="muted-cell">(if on file)</span>
+                <span>
+                  Date of birth <span className="muted-cell">(if on file)</span>
+                </span>
                 <input
                   type="date"
                   value={dateOfBirth}
