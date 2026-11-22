@@ -17,11 +17,13 @@ import {
 import campusImage from "@/assets/campus-hero.jpg";
 import { Button } from "@/components/ui/button";
 import { BackToTop, SiteFooter, SiteHeader } from "@/components/public-site/site-chrome";
+import { Lightbox } from "@/components/public-site/gallery-page";
 import { resolvePublicAssetUrl } from "@/lib/public-api";
 import {
   fetchPublicNotices,
   fetchPublicResultsAnnouncements,
   fetchPublicSite,
+  type GalleryPhotoDto,
 } from "@/lib/public-site-api";
 
 interface FeedItem {
@@ -71,6 +73,7 @@ export function HomePage() {
   const documents = site.data?.documents ?? [];
   const institutions = site.data?.institutions ?? [];
   const gallery = site.data?.gallery ?? [];
+  const [activePhoto, setActivePhoto] = useState<GalleryPhotoDto | null>(null);
   const profile = site.data?.profile;
 
   const schoolName = profile?.schoolName ?? "Agradoot Preparatory and High School";
@@ -210,15 +213,23 @@ export function HomePage() {
           {gallery.length > 0 ? (
             <div className="gallery-grid">
               {gallery.slice(0, 8).map((photo) => (
-                <div className="gallery-item" key={photo.id}>
+                <button
+                  type="button"
+                  className="gallery-item gallery-item-button"
+                  key={photo.id}
+                  onClick={() => setActivePhoto(photo)}
+                  aria-label={photo.caption ? `View photo: ${photo.caption}` : "View photo"}
+                >
                   <img src={resolvePublicAssetUrl(photo.imageUrl)} alt={photo.caption ?? ""} loading="lazy" />
-                </div>
+                </button>
               ))}
             </div>
           ) : (
             !site.isLoading && <p className="empty-search">No photos published yet — check back soon.</p>
           )}
         </section>
+
+        {activePhoto && <Lightbox photo={activePhoto} onClose={() => setActivePhoto(null)} />}
 
         <section className="school-container institutions" id="institutions" aria-label="Our institutions">
           {institutions.length === 0 && !site.isLoading && (

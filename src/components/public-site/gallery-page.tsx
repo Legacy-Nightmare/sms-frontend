@@ -5,7 +5,7 @@ import { BackToTop, SiteFooter, SiteHeader, SubpageHero } from "@/components/pub
 import { resolvePublicAssetUrl } from "@/lib/public-api";
 import { fetchPublicSite, type GalleryPhotoDto } from "@/lib/public-site-api";
 
-function Lightbox({ photo, onClose }: { photo: GalleryPhotoDto; onClose: () => void }) {
+export function Lightbox({ photo, onClose }: { photo: GalleryPhotoDto; onClose: () => void }) {
   // F-16: this opened with no role/aria-modal at all, so a screen reader
   // never announced it as a dialog — it just silently read whatever text
   // happened to be behind the overlay. Moving focus to the close button on
